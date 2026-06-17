@@ -1,0 +1,280 @@
+\documentclass[11pt]{article}
+
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{amsmath,amssymb,bm}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{hyperref}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  urlcolor=blue,
+  citecolor=black
+}
+
+\newcommand{\dd}{\mathrm{d}}
+\newcommand{\Tr}{\operatorname{Tr}}
+\newcommand{\Oh}{\mathcal{O}}
+\newcommand{\ii}{\mathrm{i}}
+
+\title{Tree Plus One-Loop Equations for the Quartic Oscillator}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Euclidean one-loop action}
+
+Consider the Euclidean quartic oscillator
+\begin{equation}
+S_E[q]=\int \dd \tau\left[
+\frac{m}{2}\dot q^{2}+\frac{1}{2}m\omega^2q^2+\frac{\lambda}{24}q^4
+\right].
+\end{equation}
+Split
+\begin{equation}
+q(\tau)=Q(\tau)+\eta(\tau).
+\end{equation}
+Expanding around an arbitrary background, and assuming boundary terms vanish, gives
+\begin{equation}
+S_E[Q+\eta]
+=S_E[Q]
++\int \dd\tau\,\eta(\tau)E_Q(\tau)
++\frac{1}{2}\int \dd\tau\,\eta\,\Oh_Q\,\eta+
+\cdots,
+\end{equation}
+where
+\begin{equation}
+E_Q=-m\ddot Q+m\omega^2 Q+\frac{\lambda}{6}Q^3,
+\end{equation}
+and the quadratic fluctuation operator is
+\begin{equation}
+\Oh_Q=-m\frac{\dd^2}{\dd\tau^2}+m\omega^2+\frac{\lambda}{2}Q^2(\tau)
+=m\left[-\frac{\dd^2}{\dd\tau^2}+\Omega^2(\tau)\right],
+\end{equation}
+with
+\begin{equation}
+\Omega^2(\tau)=\omega^2+\frac{\lambda}{2m}Q^2(\tau).
+\end{equation}
+In the effective-action construction the linear term is cancelled by the source. It also vanishes if the background is chosen to obey the classical equation. The one-loop effective action is
+\begin{equation}
+\Gamma_E[Q]=S_E[Q]+\frac{\hbar}{2}\Tr\ln \Oh_Q+O(\hbar^2).
+\end{equation}
+The factor of $m$ in $\Oh_Q$ gives only a field-independent determinant and will be dropped below.
+
+After subtracting the field-independent $Q=0$ determinant, the derivative expansion of the determinant is
+\begin{equation}
+\Delta\Gamma_E^{\rm 1-loop}[Q]
+=\hbar\int \dd\tau\left[
+\frac{1}{2}\bigl(\Omega-\omega\bigr)
++\frac{\dot\Omega^2}{16\Omega^3}
++O(\partial_\tau^4)
+\right].
+\label{eq:det-derivative-expansion}
+\end{equation}
+Since
+\begin{equation}
+\dot\Omega=\frac{\lambda Q\dot Q}{2m\Omega},
+\end{equation}
+we obtain the local slow-background action
+\begin{equation}
+\Gamma_E[Q]\simeq
+\int \dd\tau\left[
+\frac{m}{2}\dot Q^2
++V_{\rm eff}(Q)
++\hbar\,\frac{\lambda^2Q^2\dot Q^2}{64m^2\Omega^5}
+\right],
+\label{eq:local-action-euclidean}
+\end{equation}
+where
+\begin{equation}
+V_{\rm eff}(Q)=
+\frac{1}{2}m\omega^2Q^2+\frac{\lambda}{24}Q^4
++\frac{\hbar}{2}\bigl[\Omega(Q)-\omega\bigr],
+\qquad
+\Omega(Q)=\sqrt{\omega^2+\frac{\lambda}{2m}Q^2}.
+\end{equation}
+This local action is valid in the adiabatic regime
+\begin{equation}
+\frac{|\dot\Omega|}{\Omega^2}\ll 1,
+\qquad
+\frac{|\ddot\Omega|}{\Omega^3}\ll 1,
+\qquad \ldots
+\end{equation}
+
+\section{Euclidean equation of motion}
+
+Write the local action as
+\begin{equation}
+\Gamma_E[Q]\simeq \int \dd\tau
+\left[\frac{1}{2}Z(Q)\dot Q^2+V_{\rm eff}(Q)\right],
+\end{equation}
+with
+\begin{equation}
+Z(Q)=m+\hbar\frac{\lambda^2Q^2}{32m^2\Omega^5}.
+\end{equation}
+Varying gives
+\begin{align}
+\frac{\partial L_E}{\partial Q}
+&=\frac{1}{2}Z'(Q)\dot Q^2+V'_{\rm eff}(Q),\\
+\frac{\partial L_E}{\partial \dot Q}
+&=Z(Q)\dot Q,\\
+\frac{\dd}{\dd\tau}\frac{\partial L_E}{\partial \dot Q}
+&=Z(Q)\ddot Q+Z'(Q)\dot Q^2.
+\end{align}
+Therefore the Euclidean equation of motion is
+\begin{equation}
+\boxed{
+-Z(Q)\ddot Q-\frac{1}{2}Z'(Q)\dot Q^2+V'_{\rm eff}(Q)=0
+}
+\label{eq:eom-euclidean-general}
+\end{equation}
+or equivalently
+\begin{equation}
+\boxed{
+Z(Q)\ddot Q+\frac{1}{2}Z'(Q)\dot Q^2=V'_{\rm eff}(Q).
+}
+\end{equation}
+The needed derivatives are
+\begin{equation}
+V'_{\rm eff}(Q)=m\omega^2Q+\frac{\lambda}{6}Q^3
++\hbar\frac{\lambda Q}{4m\Omega},
+\end{equation}
+\begin{equation}
+Z'(Q)=\hbar\frac{\lambda^2}{32m^2}
+\left[
+\frac{2Q}{\Omega^5}-\frac{5\lambda Q^3}{2m\Omega^7}
+\right].
+\end{equation}
+Thus the explicit slow-background tree plus one-loop Euclidean equation is
+\begin{equation}
+\boxed{
+-\left[m+\hbar\frac{\lambda^2Q^2}{32m^2\Omega^5}\right]\ddot Q
+-\frac{\hbar\lambda^2}{64m^2}
+\left[
+\frac{2Q}{\Omega^5}-\frac{5\lambda Q^3}{2m\Omega^7}
+\right]\dot Q^2
++m\omega^2Q+\frac{\lambda}{6}Q^3
++\hbar\frac{\lambda Q}{4m\Omega}=0.
+}
+\label{eq:eom-euclidean-explicit}
+\end{equation}
+Here all quantities are evaluated at $Q=Q(\tau)$, and a dot denotes $\dd/\dd\tau$. The equation is accurate up to $O(\hbar^2)$ and up to omitted higher-derivative terms, schematically $O(\partial_\tau^4)$ in the action.
+
+Before the slow-background expansion, the exact Euclidean one-loop equation is nonlocal:
+\begin{equation}
+\boxed{
+-m\ddot Q+m\omega^2Q+\frac{\lambda}{6}Q^3
++\frac{\hbar\lambda}{2}Q(\tau)G_E(\tau,\tau)=0,
+}
+\end{equation}
+where
+\begin{equation}
+\left[-m\frac{\dd^2}{\dd\tau^2}+m\omega^2+\frac{\lambda}{2}Q^2(\tau)\right]
+G_E(\tau,\tau')=\delta(\tau-\tau').
+\end{equation}
+As a useful check, the diagonal Green function has the adiabatic expansion
+\begin{equation}
+G_E(\tau,\tau)
+=\frac{1}{m}\left[
+\frac{1}{2\Omega}
+-\frac{\ddot\Omega}{8\Omega^4}
++\frac{3\dot\Omega^2}{16\Omega^5}
++O(\partial_\tau^4)
+\right].
+\end{equation}
+Using $\dot\Omega=\lambda Q\dot Q/(2m\Omega)$, this gives
+\begin{equation}
+\frac{\hbar\lambda}{2}QG_E(\tau,\tau)
+=
+\hbar\frac{\lambda Q}{4m\Omega}
+-\hbar\frac{\lambda^2Q^2}{32m^2\Omega^5}\ddot Q
+-\frac{\hbar\lambda^2}{64m^2}
+\left[
+\frac{2Q}{\Omega^5}-\frac{5\lambda Q^3}{2m\Omega^7}
+\right]\dot Q^2
++O(\partial_\tau^4).
+\end{equation}
+Thus the local equation \eqref{eq:eom-euclidean-explicit} is the derivative expansion of this nonlocal one-loop result.
+
+\section{Real-time one-loop equations}
+
+The real-time classical action is
+\begin{equation}
+S[Q]=\int \dd t\left[
+\frac{m}{2}\dot Q^2
+-\frac{1}{2}m\omega^2Q^2
+-\frac{\lambda}{24}Q^4
+\right],
+\end{equation}
+where now a dot denotes $\dd/\dd t$. The quadratic fluctuation operator is
+\begin{equation}
+D_Q=-m\frac{\dd^2}{\dd t^2}-m\omega^2-\frac{\lambda}{2}Q^2(t)+\ii 0.
+\end{equation}
+The in-out one-loop effective action is
+\begin{equation}
+\Gamma_{\rm in-out}[Q]
+=S[Q]+\frac{\ii\hbar}{2}\Tr\ln D_Q+O(\hbar^2).
+\end{equation}
+Varying it gives
+\begin{equation}
+\boxed{
+m\ddot Q+m\omega^2Q+\frac{\lambda}{6}Q^3
++\frac{\ii\hbar\lambda}{2}Q(t)G_{\rm F}(t,t)=0,
+}
+\label{eq:realtime-exact-inout}
+\end{equation}
+where
+\begin{equation}
+D_QG_{\rm F}(t,t')=\delta(t-t').
+\end{equation}
+Here $G_{\rm F}$ denotes the inverse of $D_Q$; with this convention the usual
+Feynman two-point function is $\ii\hbar G_{\rm F}$.
+For a constant background, $G_{\rm F}(t,t)=-\ii/(2m\Omega)$, and \eqref{eq:realtime-exact-inout} reduces to
+\begin{equation}
+m\ddot Q+m\omega^2Q+\frac{\lambda}{6}Q^3
++\hbar\frac{\lambda Q}{4m\Omega}=0.
+\end{equation}
+
+For real causal time evolution one should use the in-in, or Schwinger--Keldysh, effective action. At one loop its equation has the same tadpole form,
+\begin{equation}
+\boxed{
+m\ddot Q+m\omega^2Q+\frac{\lambda}{6}Q^3
++\frac{\lambda}{2}Q(t)\,\langle \eta^2(t)\rangle_Q=0,
+}
+\end{equation}
+where $\langle\eta^2(t)\rangle_Q$ includes the factor of $\hbar$ and is evaluated in the Gaussian theory with time-dependent frequency $\Omega^2(t)=\omega^2+\lambda Q^2(t)/(2m)$. For an adiabatic vacuum, $\langle\eta^2\rangle_Q=\hbar/(2m\Omega)+\cdots$.
+
+In the same slow-background approximation used above, the real part of the local real-time one-loop action is obtained by Wick rotating \eqref{eq:local-action-euclidean}:
+\begin{equation}
+\Gamma_{\rm RT}[Q]\simeq
+\int \dd t\left[
+\frac{1}{2}Z(Q)\dot Q^2-V_{\rm eff}(Q)
+\right],
+\end{equation}
+with the same functions $Z(Q)$, $V_{\rm eff}(Q)$ and $\Omega(Q)$ as above. Therefore the local real-time equation of motion is
+\begin{equation}
+\boxed{
+Z(Q)\ddot Q+\frac{1}{2}Z'(Q)\dot Q^2+V'_{\rm eff}(Q)=0.
+}
+\label{eq:realtime-local-general}
+\end{equation}
+Explicitly,
+\begin{equation}
+\boxed{
+\left[m+\hbar\frac{\lambda^2Q^2}{32m^2\Omega^5}\right]\ddot Q
++\frac{\hbar\lambda^2}{64m^2}
+\left[
+\frac{2Q}{\Omega^5}-\frac{5\lambda Q^3}{2m\Omega^7}
+\right]\dot Q^2
++m\omega^2Q+\frac{\lambda}{6}Q^3
++\hbar\frac{\lambda Q}{4m\Omega}=0.
+}
+\label{eq:realtime-local-explicit}
+\end{equation}
+All quantities in \eqref{eq:realtime-local-explicit} are evaluated at $Q=Q(t)$. This equation is the real-time adiabatic, local form of the one-loop corrected equation. For strongly time-dependent backgrounds, the full real-time equation is nonlocal and, in the in-out formalism, can acquire an imaginary part describing nonadiabatic excitation of fluctuations.
+
+\end{document}
