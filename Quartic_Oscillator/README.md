@@ -6,7 +6,7 @@ Numerically evolves a 1D **anharmonic quantum oscillator** starting from a
 readout.
 
 It also produces a **comparison plot** of the mean position `⟨q⟩(t)` with **four**
-curves: the **full quantum** result (exact Fock evolution), the **classical**
+curves: the **full quantum** result (numerically exact in an `Ncut`-state Fock basis), the **classical**
 solution `q(t)` (tree level), and the two **real-time tree + one-loop** solutions
 from [`theory/q4_1_loop.tex`](theory/q4_1_loop.tex) — the **local adiabatic (A)**
 and the **causal nonlocal (B)** equations (the leading ħ correction, local vs with
@@ -34,8 +34,9 @@ browser with no Julia, no server, and no internet. Edit the parameters, click
 - a physics report (norm/energy conservation, coherent-state checks), and
 - a one-click **animated GIF export** (encoded in the browser).
 
-It re-implements the *same* physics as the Julia code (Fock-basis diagonalization,
-exact evolution, Hermite reconstruction, RK4 classical + tree+one-loop) and
+It re-implements the *same* physics as the Julia code (Fock-basis diagonalization
+— via an in-browser Jacobi eigensolver — exact-within-`Ncut` evolution, Hermite
+reconstruction, RK4 classical + tree+one-loop) and
 reproduces the Julia results to ~10 significant figures (e.g. for the defaults
 `⟨H⟩(0)=1.317`, and every `⟨q⟩(t)`/classical/one-loop value agrees to ~1e-13; the
 tiny difference is the in-browser Jacobi eigensolver vs Julia's LAPACK `eigen`).
@@ -47,7 +48,7 @@ The Julia version below remains the reference implementation and test bed.
 ```
 oscillator.html                interactive browser UI (no install — just open it)
 src/anharmonic_oscillator.jl   the Julia simulator (single method, one file)
-src/audit_checks.jl            regression / verification suite (34 checks)
+src/audit_checks.jl            regression / verification suite (39 checks)
 fig/                           generated figures (GIF + comparison PNG)
 theory/q4_1_loop.{tex,pdf}     tree + one-loop effective-action derivation
 README.md
@@ -55,21 +56,35 @@ README.md
 
 ## Method
 
-Single method — **Fock (number) basis, exact propagation**:
+Single method — **Fock (number) basis, numerically exact within an `Ncut`
+truncation**:
 
 1. Build `a`, `a†`, `x` as `Ncut × Ncut` matrices.
 2. `H = ħω(a†a + ½) + (λ/4!)·x⁴`, the quartic (Duffing) anharmonic oscillator
    with `x = √(ħ/2mω)(a+a†)`. The quartic uses the `λq⁴/4! = (λ/24)q⁴`
-   normalization (same as the theory note).
+   normalization (same as the theory note). The `x⁴` term is the **Galerkin
+   projection** `P_N x⁴ P_N` (built in an `N+4` workspace and cropped), *not* the
+   naive `(P_N x P_N)⁴` — truncating `x` before raising it to the 4th power would
+   delete the virtual paths through Fock levels ≥ N and corrupt the matrix near the
+   cutoff (the audit checks this matches the analytic three-band `x⁴`).
 3. Diagonalize `H` **once** with `eigen`, then evolve the coherent state in the
    energy eigenbasis: `|ψ(t)⟩ = V·exp(−iEt/ħ)·Vᵀ|ψ(0)⟩`. No time-stepping error
    — norm and energy are conserved to machine precision and **hard-asserted**.
 4. Reconstruct `ψ(x,t)` on a grid using harmonic-oscillator eigenfunctions built
    from a numerically stable Hermite recurrence (no factorial/overflow).
 
-This basis was chosen because it needs **zero installs** (stdlib + `Plots` only)
-and the exact diagonalization makes the propagation unitary to machine precision,
-so norm and energy conservation can be hard-asserted rather than just monitored.
+**What "exact" / "full quantum" means here:** the evolution is *unitary with no
+time-stepping error within the kept `Ncut`-dimensional Fock space* — not the exact
+infinite-dimensional answer. The Fock truncation is a separate, controlled
+approximation. Crucially, **norm/energy conservation do not detect truncation
+error** (both hold inside the kept subspace by unitarity); that is caught by the
+`convergence_check` (re-runs at higher `Ncut` and compares the density) and by the
+top-5% Fock-population gauges (reported at `t=0` *and* as the max over the whole
+evolution, since `x⁴` couples population upward into the cutoff during the run).
+
+This basis needs **zero installs** (stdlib + `Plots` only), and within the
+truncation the propagation is unitary to machine precision, so norm/energy
+conservation can be hard-asserted rather than just monitored.
 
 ## Requirements
 
@@ -168,7 +183,7 @@ A standalone regression suite ([src/audit_checks.jl](src/audit_checks.jl))
 independently verifies the physics, numerics, classical EOM, and robustness:
 
 ```bash
-julia src/audit_checks.jl     # 34 checks; nonzero exit on any failure
+julia src/audit_checks.jl     # 39 checks; nonzero exit on any failure
 ```
 
 Highlights of what it proves:

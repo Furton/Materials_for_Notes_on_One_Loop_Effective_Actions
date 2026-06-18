@@ -13,7 +13,7 @@
 #
 #  It ALSO produces a static comparison figure (q_comparison.png) overlaying
 #  FOUR solutions for the mean position:
-#     * the FULL QUANTUM <q>(t)              (exact Fock-basis evolution),
+#     * the FULL QUANTUM <q>(t)              (numerically exact in an Ncut Fock basis),
 #     * the CLASSICAL q(t)                   (tree level / hbar^0 EOM),
 #     * the TREE + ONE-LOOP LOCAL (A)        (local adiabatic eq; oneloop_trajectory), and
 #     * the TREE + ONE-LOOP NONLOCAL (B)     (causal memory eq; nonlocal_trajectory).
@@ -22,8 +22,14 @@
 #  at early times (Ehrenfest) and separate once the wavepacket distorts. The
 #  classical and one-loop curves are integrated with a stdlib RK4 (no extra packages).
 #
-#  METHOD (exact, zero-install)
-#  ----------------------------
+#  METHOD (numerically exact within an Ncut Fock truncation, zero-install)
+#  -----------------------------------------------------------------------
+#    * "Exact" / "full quantum" here means UNITARY evolution with NO time-stepping
+#      error in the kept Ncut-dimensional Fock space -- NOT the exact infinite-
+#      dimensional answer. The Fock truncation (levels 0 .. Ncut-1) is a separate,
+#      controlled approximation; its error is NOT seen by norm/energy conservation
+#      (both hold within the kept subspace) -- only by the convergence_check (re-run
+#      at higher Ncut) and the top-5% Fock-population gauges (t=0 and max-over-t).
 #    * Build annihilation / creation operators a, adag as bidiagonal matrices of
 #      size Ncut (Fock truncation: levels 0 .. Ncut-1).
 #    * Position operator   x = sqrt(hbar/(2 m omega)) * (a + adag).
@@ -42,8 +48,9 @@
 #  ------------------
 #    * It runs with ZERO non-stdlib installs (only LinearAlgebra/Printf + the
 #      optional, guarded `using Plots`).
-#    * The propagation is EXACT (energy and norm conserved to ~machine eps), so
-#      we can hard-assert conservation instead of merely reporting O(dt^2) drift.
+#    * The propagation is exact WITHIN the truncation (energy and norm conserved to
+#      ~machine eps in the kept subspace), so we can hard-assert conservation instead
+#      of merely reporting O(dt^2) drift (truncation error is gauged separately).
 #    * eigen() gives the exact spectrum/eigenvectors, so the coherent state is
 #      propagated with NO time-stepping error and the comparison curves start
 #      from the identical initial condition.
@@ -118,12 +125,13 @@ Base.@kwdef struct Params
     # theory/q4_1_loop.tex. The default 0.3 gives quartic coefficient 0.3/24 ~ 0.0125.
 
     # --- initial coherent state ---
-    # Provide EITHER alpha (complex) OR (x0,p0). If x0 or p0 is finite it
-    # overrides the corresponding part of alpha. Mapping:
+    # Provide EITHER alpha (complex) OR (x0,p0). If x0 OR p0 is finite the run
+    # switches FULLY to (x0,p0) mode and alpha is ignored; an unspecified component
+    # defaults to 0 (so x0=3 alone means p0=0, NOT Im(alpha)). Mapping:
     #   x0 = sqrt(2 hbar/(m omega)) Re(alpha),   p0 = sqrt(2 hbar m omega) Im(alpha)
     alpha::ComplexF64 = 1.4 + 0.0im # complex displacement amplitude
-    x0::Float64 = NaN              # initial mean position (overrides Re(alpha) if finite)
-    p0::Float64 = NaN              # initial mean momentum (overrides Im(alpha) if finite)
+    x0::Float64 = NaN              # initial mean position (NaN ⇒ use alpha; any finite x0/p0 ⇒ (x0,p0) mode)
+    p0::Float64 = NaN              # initial mean momentum (NaN ⇒ use alpha; unspecified component ⇒ 0)
 
     # --- Fock-space truncation ---
     # NOTE: x^4 couples to higher Fock levels than the coherent state itself
@@ -204,13 +212,31 @@ end
 
 H = hbar*omega*(N + 1/2) + (lambda/24) * x^4  (= lambda q^4 / 4!), a dense
 Hermitian matrix in the Fock basis.
+
+The anharmonic term is the **Galerkin projection** `P_N x⁴ P_N`, NOT `(P_N x P_N)⁴`.
+Truncating `x` to `N` levels and *then* taking the 4th power deletes the virtual
+paths through Fock levels ≥ N, which corrupts the matrix near the cutoff (the
+`⟨n|x⁴|n⟩` element is already off by O(100) at N≈6). We instead build `x` in an
+`(N+4)`-dimensional workspace, form `x⁴` there, and crop the exact upper-left
+`N×N` block — this reproduces the analytic three-band `x⁴` to machine precision and
+is the proper variational (Rayleigh–Ritz) finite-basis Hamiltonian. For the default
+(well-converged) state the two constructions agree to ~1e-13, but they diverge for
+under-resolved / large-amplitude runs, which is exactly where the difference matters.
 """
 function build_hamiltonian(p::Params)
-    _, _, X, Nop = build_operators(p)
-    Hho = p.hbar * p.omega .* (Nop .+ 0.5 .* Matrix{ComplexF64}(I, p.Ncut, p.Ncut))
-    X2 = X * X
-    Hanh = (p.lambda / 24) .* (X2 * X2)       # (lambda/24) x^4 = lambda x^4 / 4!
-    H = Hho .+ Hanh
+    N = p.Ncut
+    pad = 4
+    M = N + pad
+    a = zeros(ComplexF64, M, M)
+    for n in 1:M-1
+        a[n, n+1] = sqrt(n)
+    end
+    Xbig = sqrt(p.hbar / (2 * p.m * p.omega)) .* (a .+ a')
+    X4 = (Xbig * Xbig * Xbig * Xbig)[1:N, 1:N]   # = P_N x⁴ P_N (exact projection)
+    H = (p.lambda / 24) .* X4
+    for n in 0:N-1
+        H[n+1, n+1] += p.hbar * p.omega * (n + 0.5)   # ħω(a†a + ½), diagonal & truncation-exact
+    end
     # Symmetrize to kill tiny round-off asymmetry so eigen() returns a real spectrum.
     H = (H .+ H') ./ 2
     return Hermitian(H)
@@ -521,6 +547,7 @@ struct SimResult
     Vx::Vector{Float64}       # potential V(x) on the grid
     Evals::Vector{Float64}    # eigen-energies (for reference)
     toppop::Float64           # population in the top 5% of Fock levels at t=0 (truncation gauge)
+    toppop_dyn::Float64       # MAX top-5% Fock population over t (dynamical truncation gauge)
     trunc_err::Float64        # |norm of un-renormalized coherent state - 1| (basis adequacy)
 end
 
@@ -600,7 +627,7 @@ function simulate(p::Params)
     # --- classical trajectory q(t) from the classical EOM (same initial alpha) ---
     qcl, pcl = classical_trajectory(p, alpha, ts)
     if any(!isfinite, qcl)
-        @warn "Classical trajectory diverged to NaN/Inf (unbounded potential, e.g. lambda<0); the classical q(t) curve will be incomplete. The quantum evolution is unaffected."
+        @warn "Classical trajectory diverged to NaN/Inf (unbounded potential, e.g. lambda<0); the classical q(t) curve will be incomplete. The quantum propagator still runs and conserves norm/energy WITHIN the fixed Ncut, but for lambda<0 the potential is unbounded below: the Fock truncation acts as an artificial regulator, so the spectrum (and hence the evolution) is Ncut-dependent and NOT physically convergent — treat it as a regularized toy model, not the true lambda<0 dynamics."
     end
 
     # --- tree+one-loop means: local adiabatic (A) and causal nonlocal (B) ---
@@ -614,14 +641,21 @@ function simulate(p::Params)
     norm_x = zeros(Float64, p.Nt)
     norm_f = zeros(Float64, p.Nt)
 
+    # dynamical truncation gauge: the MAX population in the top 5% of Fock levels
+    # over the whole evolution. The t=0 gauge (toppop) misses population leaking INTO
+    # the cutoff during the run (x^4 couples upward), which is exactly how a too-small
+    # Ncut hides while norm/energy stay conserved within the kept subspace.
+    toppop_dyn = toppop
+
     phase = similar(c_E)              # workspace
     for (k, t) in enumerate(ts)
-        # exact propagation in the eigenbasis
+        # exact propagation in the eigenbasis (exact WITHIN the Ncut truncation)
         @. phase = c_E * cis(-Evals * t / p.hbar)   # cis(theta) = exp(i theta)
         psi_f = Vmat * phase                          # state in Fock basis
 
         # Fock-basis expectation values (basis-independent, cheap, exact)
         norm_f[k] = real(dot(psi_f, psi_f))
+        toppop_dyn = max(toppop_dyn, sum(abs2, @view psi_f[end-ntop+1:end]) / norm_f[k])
         xexp[k]   = real(dot(psi_f, X * psi_f))
         pexp[k]   = real(dot(psi_f, P * psi_f))
         energy[k] = real(dot(psi_f, H * psi_f))
@@ -633,7 +667,7 @@ function simulate(p::Params)
     end
 
     return SimResult(p, alpha, xs, ts, dens, xexp, pexp, qcl, pcl, qol, qnl, energy,
-                     norm_x, norm_f, Vx, Evals, toppop, trunc_err)
+                     norm_x, norm_f, Vx, Evals, toppop, toppop_dyn, trunc_err)
 end
 
 # =============================================================================
@@ -673,10 +707,13 @@ function report_checks(r::SimResult)
     @printf("  <H>(0)                           = %.10f\n", e0)
     @printf("  max relative |<H>(t)-<H>(0)|     = %.3e  (constant of motion)\n", e_dev)
 
-    # truncation gauge (NOT a sufficient check on its own -- see convergence_check)
-    @printf("  population in top 5%% Fock levels = %.3e  (want << 1; see note)\n", r.toppop)
-    if r.toppop > 1e-6
-        @warn @sprintf("Fock truncation may be insufficient: top-level population = %.2e. Increase Ncut.", r.toppop)
+    # Truncation gauges. NOTE: norm/energy conservation above are conserved WITHIN the
+    # kept Ncut subspace by unitarity, so they do NOT detect truncation error -- the
+    # gauges below and the convergence_check (re-run at higher Ncut) are what catch it.
+    @printf("  top-5%% Fock population: t=0 = %.3e ,  max over t = %.3e  (want << 1)\n",
+            r.toppop, r.toppop_dyn)
+    if r.toppop_dyn > 1e-6
+        @warn @sprintf("Fock truncation may be insufficient: top-level population reaches %.2e during the evolution -- increase Ncut (and trust the convergence check, not norm/energy conservation).", r.toppop_dyn)
     end
 
     # Hard assertions. Conservation/unitarity asserts hold ALWAYS (they test the
@@ -786,7 +823,14 @@ function animate(r::SimResult)
     Elo = minimum(r.Vx)
     Ehi = max(1.6 * e0, e0 + 2.0)
 
-    anim = @animate for k in 1:p.Nt
+    # Use the non-macro Plots.Animation API (NOT the @animate macro): a macro is
+    # expanded at function-DEFINITION (lowering) time, so an @animate here would make
+    # this whole file fail to `include` whenever Plots is absent — defeating the
+    # runtime `_HAVE_PLOTS` guard above and the "physics runs without Plots" promise.
+    # Plain function calls (Plots.Animation/Plots.frame/...) resolve at CALL time, so
+    # the file loads Plots-free and only `animate(...)` itself requires Plots.
+    anim = Plots.Animation()
+    for k in 1:p.Nt
         ttl = @sprintf("Anharmonic oscillator (lambda q^4/4!, Fock)  t=%6.3f\n<q>=%+.3f  norm=%.6f  <H>=%.4f (E0=%.4f)",
                        r.ts[k], r.xexp[k], r.norm_fock[k], r.energy[k], e0)
         # Left axis: probability density (filled area).
@@ -812,7 +856,7 @@ function animate(r::SimResult)
               lw=2, ls=:dash, color=:gray35, label="V(x) (energy)",
               ylabel="energy", ylim=(Elo, Ehi), xlim=(p.xmin, p.xmax),
               legend=:topleft)
-        plt
+        Plots.frame(anim, plt)
     end
 
     out = p.giffile

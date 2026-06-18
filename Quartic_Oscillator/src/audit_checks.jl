@@ -17,6 +17,9 @@
 #     at lambda=0 and each satisfies its own EOM (the nonlocal memory residual too).
 #   * Robustness: graceful Fock-truncation, autogrid, negative-lambda warning,
 #     friendly unknown-keyword error.
+#   * Truncation honesty: a deliberately under-truncated run conserves energy to
+#     ~1e-15 (so conservation is BLIND to cutoff error) while the dynamical
+#     top-population gauge and the higher-Ncut convergence re-run both DETECT it.
 # =============================================================================
 ENV["GKSwstype"] = "nul"
 include(joinpath(@__DIR__, "anharmonic_oscillator.jl"))
@@ -220,6 +223,23 @@ let
     expected = 0.5 + (lam/24) * x4_00              # <0|H|0> = hw/2 + (lambda/24)<x^4>
     check("quartic = lambda/24 (= lambda q^4/4!)", abs(real(H[1,1]) - expected) < 1e-12,
           @sprintf("H[1,1]=%.6f vs %.6f", real(H[1,1]), expected))
+    # Galerkin-projection check: the FULL x^4 matrix (not just H[1,1]) must equal the
+    # analytic three-band P_N x^4 P_N, INCLUDING the cutoff rows where the naive
+    # (P_N x P_N)^4 construction is wrong by O(100). s^4=(hbar/2mw)^2=1/4 at hbar=m=w=1.
+    let Np = 12, s4 = 0.25
+        Hp = Matrix(build_hamiltonian(Params(lambda=24.0, hbar=1.0, m=1.0, omega=1.0, Ncut=Np)))
+        x4code = real.(Hp)
+        for n in 0:Np-1; x4code[n+1,n+1] -= (n + 0.5); end          # peel off hw(n+1/2)
+        x4an = zeros(Np, Np)
+        for n in 0:Np-1
+            x4an[n+1,n+1] = s4 * (6n^2 + 6n + 3)
+            if n+2 <= Np-1; v = s4*2*(2n+3)*sqrt((n+1)*(n+2));            x4an[n+1,n+3]=v; x4an[n+3,n+1]=v; end
+            if n+4 <= Np-1; v = s4*sqrt((n+1)*(n+2)*(n+3)*(n+4));         x4an[n+1,n+5]=v; x4an[n+5,n+1]=v; end
+        end
+        errp = maximum(abs.(x4code .- x4an))
+        check("x^4 = analytic P_N x^4 P_N (incl. cutoff rows)", errp < 1e-10,
+              @sprintf("max|x^4_code - analytic|=%.2e (naive (PxP)^4 would be O(100))", errp))
+    end
     rA = simulate(Params(lambda=1.2, hbar=1.0, alpha=2.0+0.0im, Ncut=120, xmin=-12.0, xmax=12.0,
                          make_gif=false, make_comparison=false, convergence_check=false))
     check("<H>(0)=8.9375 at ħ=m=ω=1, λ=1.2, α=2", abs(rA.energy[1]-8.9375) < 1e-3,
@@ -264,6 +284,30 @@ let
     end
     check("nonlocal RK4 satisfies eq (B) residual", maxres/maxscale < 5e-3,
           @sprintf("rel residual=%.2e", maxres/maxscale))
+end
+
+# 16. TRUNCATION ERROR IS DETECTABLE, not hidden by conservation. A deliberately
+#     under-truncated run (alpha=4, Ncut=60, lambda=2) conserves energy to machine
+#     precision -- proving norm/energy conservation CANNOT see truncation -- yet the
+#     dynamical top-population gauge and the higher-Ncut convergence re-run both flag
+#     a catastrophic cutoff error. The default run is cleanly resolved.
+println("\n-- 16. cutoff error is detectable, not hidden by conservation --")
+let
+    bad  = simulate(Params(alpha=4.0+0.0im, Ncut=60,  lambda=2.0, hbar=1.0, tmax=4pi, Nt=200,
+                          xmin=-16.0, xmax=16.0, make_gif=false, make_comparison=false, convergence_check=false))
+    good = simulate(Params(alpha=4.0+0.0im, Ncut=120, lambda=2.0, hbar=1.0, tmax=4pi, Nt=200,
+                          xmin=-16.0, xmax=16.0, make_gif=false, make_comparison=false, convergence_check=false))
+    e_dev = maximum(abs.(bad.energy .- bad.energy[1])) / max(abs(bad.energy[1]), eps())
+    dx = bad.xs[2]-bad.xs[1]; l1 = sum(abs.(bad.dens[:,end] .- good.dens[:,end])) * dx
+    rd = simulate(Params(make_gif=false, make_comparison=false, convergence_check=false))
+    check("under-truncated run STILL conserves energy (conservation is blind)", e_dev < 1e-8,
+          @sprintf("e_dev=%.2e", e_dev))
+    check("dynamical top-pop FLAGS the truncation", bad.toppop_dyn > 1e-2,
+          @sprintf("max top-5%% pop=%.3f", bad.toppop_dyn))
+    check("convergence re-run DETECTS the cutoff error", l1 > 1e-1,
+          @sprintf("L1 dens diff Ncut 60 vs 120 = %.3f", l1))
+    check("default run is cleanly resolved (dyn top-pop << 1)", rd.toppop_dyn < 1e-6,
+          @sprintf("default max top-5%% pop=%.2e", rd.toppop_dyn))
 end
 
 println("\n" * "="^82)
