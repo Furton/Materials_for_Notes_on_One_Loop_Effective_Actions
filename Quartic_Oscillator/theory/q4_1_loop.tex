@@ -1,473 +1,430 @@
-\documentclass[11pt]{article}
+\documentclass[9pt]{extarticle}
 
-\usepackage[a4paper,margin=0.82in]{geometry}
-\usepackage{amsmath,amssymb,mathtools,bm}
+\usepackage[a4paper,top=0.58in,bottom=0.62in,left=0.66in,right=0.66in,headheight=14pt,headsep=7pt,footskip=22pt]{geometry}
 \usepackage[T1]{fontenc}
-\usepackage{lmodern}
+\usepackage{amsmath,mathtools,bm}
+\usepackage{newtxtext,newtxmath}
 \usepackage{microtype}
-\allowdisplaybreaks
+\usepackage[dvipsnames]{xcolor}
+\usepackage{enumitem}
+\usepackage{booktabs,tabularx,array}
+\usepackage[most]{tcolorbox}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\usepackage{hyperref}
+
+\definecolor{Ink}{HTML}{1F2937}
+\definecolor{Navy}{HTML}{17365D}
+\definecolor{Teal}{HTML}{0B6E75}
+\definecolor{PaleBlue}{HTML}{F2F6FA}
+\definecolor{PaleTeal}{HTML}{F1F8F7}
+\definecolor{Rule}{HTML}{CBD5E1}
+\definecolor{Muted}{HTML}{5B6573}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=Navy,
+  urlcolor=Teal,
+  pdftitle={Quartic Oscillator at One Loop: Compact Derivation},
+  pdfauthor={},
+  pdfsubject={Local adiabatic dynamics and causal one-loop memory}
+}
 
 \newcommand{\dd}{\mathrm d}
 \newcommand{\ii}{\mathrm i}
 \newcommand{\Tr}{\operatorname{Tr}}
-\newcommand{\Oh}{\mathcal O}
 \newcommand{\Om}{\Omega}
-\newcommand{\GE}{G_{E}}
-\newcommand{\GR}{G_{R}}
+\newcommand{\GE}{G_E}
+\newcommand{\GR}{G_R}
+\newcommand{\order}{\mathcal O}
+\newcommand{\Dtwo}{\Delta_{\mathrm{2L}}}
+\newcommand{\DBorn}{\Delta_{\mathrm{Born}}}
+\newcommand{\PB}{\{\,\cdot\,,\,\cdot\,\}_{\mathrm{PB}}}
 
-\title{Rechecked Derivation of the Tree Plus One-Loop Equations\\[1.2ex]
-\large Local Adiabatic Wick Rotation and Real-Time Nonlocal Memory}
-\author{}
-\date{}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{2.2pt plus 0.5pt minus 0.3pt}
+\setlength{\abovedisplayskip}{4.8pt plus 1.3pt minus 1.8pt}
+\setlength{\belowdisplayskip}{4.8pt plus 1.3pt minus 1.8pt}
+\setlength{\abovedisplayshortskip}{3.2pt plus 1pt}
+\setlength{\belowdisplayshortskip}{3.2pt plus 1pt}
+\setlength{\jot}{2.2pt}
+\setlength{\tabcolsep}{5pt}
+\linespread{0.985}
+\emergencystretch=2em
+\raggedbottom
+\allowdisplaybreaks[2]
+
+\setlist[itemize]{leftmargin=1.35em,itemsep=0.8pt,topsep=1.5pt,parsep=0pt}
+\setlist[enumerate]{leftmargin=1.55em,itemsep=1pt,topsep=1.5pt,parsep=0pt}
+
+\titleformat{\section}{\large\bfseries\color{Navy}}{\thesection}{0.55em}{}
+\titleformat{\subsection}{\normalsize\bfseries\color{Teal}}{\thesubsection}{0.5em}{}
+\titlespacing*{\section}{0pt}{8pt plus 2pt minus 2pt}{3pt}
+\titlespacing*{\subsection}{0pt}{6pt plus 1pt minus 1pt}{2pt}
+
+\pagestyle{fancy}
+\fancyhf{}
+
+
+
+\renewcommand{\footrulewidth}{0pt}
+\newtcolorbox{summarybox}[1][]{
+  enhanced, breakable, colback=PaleBlue, colframe=Navy,
+  boxrule=0.7pt, arc=1.5mm, left=2mm, right=2mm, top=1.4mm, bottom=1.4mm,
+  colbacktitle=Navy, coltitle=white, fonttitle=\bfseries, title=#1,
+  before skip=4pt, after skip=4pt
+}
+\newtcolorbox{validitybox}[1][]{
+  enhanced, breakable, colback=PaleTeal, colframe=Teal,
+  boxrule=0.65pt, arc=1.5mm, left=2mm, right=2mm, top=1.3mm, bottom=1.3mm,
+  colbacktitle=Teal, coltitle=white, fonttitle=\bfseries, title=#1,
+  before skip=4pt, after skip=4pt
+}
+\newtcolorbox{resultbox}[1]{
+  enhanced, colback=white, colframe=Navy, boxrule=0.9pt, arc=1.5mm,
+  left=1.5mm, right=1.5mm, top=1mm, bottom=1mm,
+  colbacktitle=Navy, coltitle=white, fonttitle=\bfseries, title=#1,
+  before skip=5pt, after skip=5pt
+}
 
 \begin{document}
-\maketitle
 
-\noindent
-The oscillator is
-\begin{equation}
-S[q]=\int \dd t\left[{m\over2}\dot q^2-{m\omega^2\over2}q^2-{\lambda\over24}q^4\right],
-\qquad
-S_E[q]=\int \dd\tau\left[{m\over2}\dot q^2+{m\omega^2\over2}q^2+{\lambda\over24}q^4\right].
-\label{eq:actions}
-\end{equation}
-Dots denote derivatives with respect to the displayed time variable.  The two final results are Eq.~\eqref{eq:final-adiabatic}, the local adiabatic one-loop equation obtained by Wick rotating the Euclidean derivative expansion, and Eq.~\eqref{eq:final-nonlocal}, the causal one-loop equation with the first real-time memory correction obtained from the mode correlator.
+\begin{center}
+{\color{Navy}\LARGE\bfseries Quartic Oscillator at One Loop}\\[-1pt]
+{\large\color{Teal}Local adiabatic dynamics and causal nonlocal memory}\\[2pt]
+\end{center}
+\vspace{-2pt}
 
-\section{Euclidean expansion and the one-loop determinant}
-
-Split
-\begin{equation}
-q(\tau)=Q(\tau)+\eta(\tau).
-\label{eq:split}
-\end{equation}
-The kinetic term expands as
-\begin{equation}
-{m\over2}(\dot Q+\dot\eta)^2={m\over2}\dot Q^2+m\dot Q\dot\eta+{m\over2}\dot\eta^2,
-\qquad
-\int\dd\tau\,m\dot Q\dot\eta=-\int\dd\tau\,m\ddot Q\eta,
-\label{eq:kin-expand}
-\end{equation}
-where boundary terms are assumed to vanish.  The potential expansion is
-\begin{align}
-{m\omega^2\over2}(Q+\eta)^2+{\lambda\over24}(Q+\eta)^4
-={}&{m\omega^2\over2}Q^2+{\lambda\over24}Q^4
-+\bigg(m\omega^2Q+{\lambda\over6}Q^3\bigg)\eta \nonumber \\
-&+{1\over2}\bigg(m\omega^2+{\lambda\over2}Q^2\bigg)\eta^2
-+{\lambda\over6}Q\eta^3+{\lambda\over24}\eta^4 .
-\label{eq:pot-expand}
-\end{align}
-Therefore
-\begin{equation}
-S_E[Q+\eta]
-=S_E[Q]+\int\dd\tau\,\eta E_Q
-+{1\over2}\int\dd\tau\,\eta\mathcal O_Q\eta
-+\int\dd\tau\left({\lambda\over6}Q\eta^3+{\lambda\over24}\eta^4\right),
-\label{eq:expanded-action}
-\end{equation}
-with
-\begin{equation}
-E_Q=-m\ddot Q+m\omega^2Q+{\lambda\over6}Q^3,
-\label{eq:EQ}
-\end{equation}
-\begin{equation}
-\mathcal O_Q=-m{\dd^2\over\dd\tau^2}+m\omega^2+{\lambda\over2}Q^2(\tau)
-=m\left[-{\dd^2\over\dd\tau^2}+\Om^2(\tau)\right],
-\qquad
-\Om^2(\tau)=\omega^2+{\lambda\over2m}Q^2(\tau).
-\label{eq:operator}
-\end{equation}
-In the effective-action construction the source cancels the term linear in \(\eta\).  The Gaussian path integral then gives
-\begin{equation}
-\Gamma_E[Q]=S_E[Q]+{\hbar\over2}\Tr\ln\mathcal O_Q+\Oh(\hbar^2).
-\label{eq:Gamma-one-loop}
-\end{equation}
-Since \(\Tr\ln\mathcal O_Q=\Tr\ln m+\Tr\ln[-\partial_\tau^2+\Om^2]\), the factor \(m\) contributes only a field-independent constant.  After also subtracting the \(Q=0\) determinant,
-\begin{equation}
-\Delta\Gamma_E^{(1)}
-={\hbar\over2}\Tr\ln[-\partial_\tau^2+\Om^2]
--{\hbar\over2}\Tr\ln[-\partial_\tau^2+\omega^2].
-\label{eq:det-subtracted}
-\end{equation}
-
-\section{Derivative expansion of the Euclidean determinant}
-
-Let
-\begin{equation}
-A=-\partial_\tau^2+\Om^2(\tau),
-\qquad
-V(\tau)=\Om^2(\tau),
-\qquad
-f(\tau,p)=p^2+V(\tau).
-\label{eq:AfV}
-\end{equation}
-The Weyl symbol \(R(\tau,p)\) of \(A^{-1}\) satisfies
-\begin{equation}
-f\star R=1,
-\label{eq:star-inverse}
-\end{equation}
-where, to second adiabatic order,
-\begin{equation}
-f\star R=fR+{\ii\over2}(f_\tau R_p-f_pR_\tau)
--{1\over8}\left(f_{\tau\tau}R_{pp}-2f_{\tau p}R_{p\tau}+f_{pp}R_{\tau\tau}\right)+\Oh(\partial_\tau^4).
-\label{eq:star-product}
-\end{equation}
-With \(R=R_0+R_2+\cdots\), Eq.~\eqref{eq:star-inverse} gives
-\begin{equation}
-R_0={1\over f}.
-\label{eq:R0}
-\end{equation}
-The first-derivative term vanishes because
-\begin{equation}
-f_\tau(R_0)_p-f_p(R_0)_\tau=V'\left(-{2p\over f^2}\right)-2p\left(-{V'\over f^2}\right)=0.
-\label{eq:first-derivative-cancel}
-\end{equation}
-Using \(f_{\tau p}=0\), \(f_{pp}=2\),
-\begin{equation}
-(R_0)_{pp}=-{2\over f^2}+{8p^2\over f^3},
-\qquad
-(R_0)_{\tau\tau}=-{V''\over f^2}+{2(V')^2\over f^3},
-\label{eq:R0-derivatives}
-\end{equation}
-the second-order equation is
-\begin{equation}
-fR_2-{1\over8}\left[V''(R_0)_{pp}+2(R_0)_{\tau\tau}\right]=0.
-\label{eq:R2-eq}
-\end{equation}
-Thus
-\begin{equation}
-R_2=-{V''\over2f^3}+{V''p^2\over f^4}+{(V')^2\over2f^4}.
-\label{eq:R2}
-\end{equation}
-The diagonal Green function is \(G_E(\tau,\tau)=\int\frac{\dd p}{2\pi}R(\tau,p)\).  The needed integrals are
-\begin{equation}
-\int{\dd p\over2\pi}{1\over p^2+\Om^2}={1\over2\Om},
-\quad
-\int{\dd p\over2\pi}{1\over f^3}={3\over16\Om^5},
-\quad
-\int{\dd p\over2\pi}{p^2\over f^4}={1\over32\Om^5},
-\quad
-\int{\dd p\over2\pi}{1\over f^4}={5\over32\Om^7}.
-\label{eq:p-integrals}
-\end{equation}
-Therefore
-\begin{align}
-G_E(\tau,\tau)
-&={1\over2\Om}-{V''\over16\Om^5}+{5(V')^2\over64\Om^7}+\Oh(\partial_\tau^4) \nonumber\\
-&={1\over2\Om}-{\ddot\Om\over8\Om^4}+{3\dot\Om^2\over16\Om^5}+\Oh(\partial_\tau^4),
-\label{eq:GE-diagonal}
-\end{align}
-where \(V'=2\Om\dot\Om\) and \(V''=2\dot\Om^2+2\Om\ddot\Om\) were used.
-
-The determinant obeys
-\begin{equation}
-\delta\Delta\Gamma_E^{(1)}={\hbar\over2}\Tr(A^{-1}\delta A)
-={\hbar\over2}\int\dd\tau\,G_E(\tau,\tau)\delta\Om^2(\tau).
-\label{eq:var-det}
-\end{equation}
-To reconstruct a local Lagrangian, set
-\begin{equation}
-L_1(\Om,\dot\Om)={1\over2}\Om+a{\dot\Om^2\over\Om^3}.
-\label{eq:L1-ansatz}
-\end{equation}
-Since \(\delta\Om=\delta(\Om^2)/(2\Om)\),
-\begin{align}
-{\delta\over\delta\Om^2}\int\dd\tau\,L_1
-&={1\over2\Om}\left({\partial L_1\over\partial\Om}-{\dd\over\dd\tau}{\partial L_1\over\partial\dot\Om}\right) \nonumber\\
-&={1\over4\Om}-a{\ddot\Om\over\Om^4}+{3a\over2}{\dot\Om^2\over\Om^5}.
-\label{eq:func-der-L1}
-\end{align}
-Comparison with \(G_E/2\) from Eq.~\eqref{eq:GE-diagonal} fixes \(a=1/16\).  Hence
-\begin{equation}
-\Delta\Gamma_E^{(1)}
-=\hbar\int\dd\tau\left[{1\over2}(\Om-\omega)+{\dot\Om^2\over16\Om^3}+\Oh(\partial_\tau^4)\right].
-\label{eq:det-derivative-expanded}
-\end{equation}
-Using Eq.~\eqref{eq:operator},
-\begin{equation}
-2\Om\dot\Om={\lambda\over m}Q\dot Q,
-\qquad
-\dot\Om={\lambda Q\dot Q\over2m\Om},
-\label{eq:Omdot}
-\end{equation}
-and therefore
-\begin{equation}
-{\dot\Om^2\over16\Om^3}={\lambda^2Q^2\dot Q^2\over64m^2\Om^5}.
-\label{eq:Omdot-term}
-\end{equation}
-The local Euclidean effective action is then
-\begin{equation}
-\Gamma_E[Q]\simeq\int\dd\tau\left[{1\over2}Z(Q)\dot Q^2+V_{\rm eff}(Q)\right],
-\label{eq:Euclidean-local-action}
-\end{equation}
-with
-\begin{equation}
-V_{\rm eff}(Q)={m\omega^2\over2}Q^2+{\lambda\over24}Q^4+{\hbar\over2}\big[\Om(Q)-\omega\big],
-\qquad
-\Om(Q)=\sqrt{\omega^2+{\lambda\over2m}Q^2},
-\label{eq:Veff}
-\end{equation}
-\begin{equation}
-Z(Q)=m+\hbar{\lambda^2Q^2\over32m^2\Om^5}.
-\label{eq:ZQ}
-\end{equation}
-
-\section{Local equation and Wick rotation}
-
+\begin{summarybox}[Scope and results]
 For
+$S[q]=\int\dd t\,[m\dot q^2/2-m\omega^2q^2/2-\lambda q^4/24]$,
+this note derives two complementary one-loop equations.  Equation~\eqref{eq:A} is local, second adiabatic order, and nonperturbative in the background amplitude.  Equation~\eqref{eq:B} is causal and retarded, but first Born in $\delta\Om^2=\lambda Q^2/(2m)$.  Their coefficients agree in the common weak-background, low-frequency, adiabatically prepared regime.  Every remainder and state assumption used below is stated explicitly.
+\end{summarybox}
+
+\section{Model, assumptions, and power counting}
+
+The Euclidean action and local fluctuation frequency are
 \begin{equation}
-L_E={1\over2}Z(Q)\,\dot Q^2+V_{\rm eff}(Q),
-\label{eq:LE}
-\end{equation}
-one has
-\begin{equation}
-{\partial L_E\over\partial Q}={1\over2}Z'(Q)\dot Q^2+V'_{\rm eff}(Q),
+S_E[q]=\int\dd\tau\left[\frac m2\dot q^2+\frac{m\omega^2}{2}q^2+\frac\lambda{24}q^4\right],
 \qquad
-{\partial L_E\over\partial\dot Q}=Z(Q)\,\dot Q,
-\label{eq:EL-pieces-1}
+\Om^2(Q)=\omega^2+\frac{\lambda Q^2}{2m}.
+\label{eq:model}
 \end{equation}
-\begin{equation}
-{\dd\over\dd\tau}{\partial L_E\over\partial\dot Q}=Z(Q)\ddot Q+Z'(Q)\dot Q^2.
-\label{eq:EL-pieces-2}
-\end{equation}
-Thus \(\partial L_E/\partial Q-\dd(\partial L_E/\partial\dot Q)/\dd\tau=0\) gives
-\begin{equation}
--Z(Q)\ddot Q-{1\over2}Z'(Q)\dot Q^2+V'_{\rm eff}(Q)=0.
-\label{eq:E-eom-local}
-\end{equation}
-The derivative of \(\Om\) with respect to \(Q\) is
-\begin{equation}
-\Om'(Q)={\lambda Q\over2m\Om}.
-\label{eq:Omprime}
-\end{equation}
-Therefore
-\begin{equation}
-V'_{\rm eff}(Q)=m\omega^2Q+{\lambda\over6}Q^3+{\hbar\over2}\Om'(Q)
-=m\omega^2Q+{\lambda\over6}Q^3+\hbar{\lambda Q\over4m\Om}.
-\label{eq:Veffprime}
-\end{equation}
-Also,
+We assume $m>0$, $\omega>0$, $\lambda\ge0$, and $\Om\ge\Om_{\min}>0$.  Euclidean time is the zero-temperature infinite line; integrations by parts are legitimate, and the background and reference determinants use identical boundary conditions.  ``One loop'' means terms through $O(\hbar)$; a self-consistent solution of a truncated equation may resum uncontrolled higher powers of $\hbar$, so strict loop accuracy requires perturbative solution or order reduction.
+
+\section{Euclidean one-loop action}
+
+\subsection{Background expansion and determinant}
+
+Set $q=Q+\eta$.  Using $\int m\dot Q\dot\eta\,\dd\tau=-\int m\ddot Q\eta\,\dd\tau$ and the binomial expansion,
 \begin{align}
-Z'(Q)
-&={\hbar\lambda^2\over32m^2}{\dd\over\dd Q}\left(Q^2\Om^{-5}\right) \nonumber\\
-&={\hbar\lambda^2\over32m^2}\left[2Q\Om^{-5}-5Q^2\Om^{-6}\Om'(Q)\right] \nonumber\\
-&={\hbar\lambda^2\over32m^2}\left[{2Q\over\Om^5}-{5\lambda Q^3\over2m\Om^7}\right].
-\label{eq:Zprime}
+S_E[Q+\eta]={}&S_E[Q]+\int\dd\tau\,\eta E_Q
++\frac12\int\dd\tau\,\eta\mathcal O_Q\eta
++\int\dd\tau\left(\frac\lambda6Q\eta^3+\frac\lambda{24}\eta^4\right),
+\label{eq:expanded}\\[1mm]
+E_Q={}&-m\ddot Q+m\omega^2Q+\frac\lambda6Q^3,
+\qquad
+\mathcal O_Q=m\left[-\partial_\tau^2+\Om^2(\tau)\right].
+\label{eq:E-and-O}
 \end{align}
-Now rotate the already local equation by
+The effective-action source cancels the linear term.  Cubic and quartic fluctuation vertices start at two loops, hence
 \begin{equation}
-\tau=\ii t,
-\qquad
-{\dd Q\over\dd\tau}=-\ii {\dd Q\over\dd t},
-\qquad
-{\dd^2Q\over\dd\tau^2}=-{\dd^2Q\over\dd t^2}.
-\label{eq:wick}
+\Gamma_E[Q]=S_E[Q]+\frac\hbar2\Tr\ln\mathcal O_Q+O(\hbar^2).
+\label{eq:Gamma1}
 \end{equation}
-Equation \eqref{eq:E-eom-local} becomes
+After removing the field-independent factor $m$ and normalizing at $Q=0$,
 \begin{equation}
-Z(Q)\ddot Q+{1\over2}Z'(Q)\dot Q^2+V'_{\rm eff}(Q)=0,
-\label{eq:RT-local-general}
-\end{equation}
-where dots now denote \(\dd/\dd t\).  Substituting Eqs.~\eqref{eq:ZQ}, \eqref{eq:Veffprime}, and \eqref{eq:Zprime}, the local adiabatic tree plus one-loop equation is
-\begin{equation}
-\boxed{\begin{aligned}
-0={}&\left[m+\hbar{\lambda^2Q^2\over32m^2\Om^5}\right]\ddot Q
-+{\hbar\lambda^2\over64m^2}\left[{2Q\over\Om^5}-{5\lambda Q^3\over2m\Om^7}\right]\dot Q^2 \\
-&+m\omega^2Q+{\lambda\over6}Q^3+\hbar{\lambda Q\over4m\Om},
-\qquad
-\Om=\sqrt{\omega^2+{\lambda\over2m}Q^2}.
-\end{aligned}}
-\tag{A}
-\label{eq:final-adiabatic}
-\end{equation}
-The derivative expansion assumes
-\begin{equation}
-{|\dot\Om|\over\Om^2}\ll1,
-\qquad
-{|\ddot\Om|\over\Om^3}\ll1,
-\label{eq:adiabatic-condition}
-\end{equation}
-and omits \(\Oh(\hbar\partial_t^4)\) and \(\Oh(\hbar^2)\) terms.  Equation \eqref{eq:final-adiabatic} is conservative because it follows from
-\begin{equation}
-\Gamma_{\rm RT}^{\rm loc}=\int\dd t\left[{1\over2}Z(Q)\dot Q^2-V_{\rm eff}(Q)\right].
-\label{eq:RT-loc-action}
+\Delta\Gamma_E^{(1)}=\frac\hbar2\Tr\ln[-\partial_\tau^2+\Om^2]
+-\frac\hbar2\Tr\ln[-\partial_\tau^2+\omega^2].
+\label{eq:det}
 \end{equation}
 
-\section{Real-time correlator from mode averaging}
+\subsection{Weyl inverse through second adiabatic order}
 
-The Heisenberg equation is
+Let $A=-\partial_\tau^2+V(\tau)$, $V=\Om^2$, $f=p^2+V$, and let $R$ be the Weyl symbol of $A^{-1}$.  The specialized Moyal equation $f\star R=1$ is
 \begin{equation}
-m\ddot q+m\omega^2q+{\lambda\over6}q^3=0.
-\label{eq:heisenberg}
+f\star R=fR+\frac\ii2(V'R_p-2pR_\tau)
+-\frac18(V''R_{pp}+2R_{\tau\tau})
+-\frac\ii{48}V'''R_{ppp}+O(\partial_\tau^4).
+\label{eq:moyal}
 \end{equation}
-Write \(q=Q+\eta\) with \(Q=\langle q\rangle\), \(\langle\eta\rangle=0\).  Since
+With $R=R_0+R_1+R_2+R_3+\cdots$,
 \begin{equation}
-\langle(Q+\eta)^3\rangle=Q^3+3Q\langle\eta^2\rangle+\langle\eta^3\rangle,
-\label{eq:cubic-average}
-\end{equation}
-and \(\langle\eta^3\rangle=0\) in the Gaussian one-loop approximation, the one-loop tadpole equation is
-\begin{equation}
-0=m\ddot Q+m\omega^2Q+{\lambda\over6}Q^3+{\lambda\over2}Q(t)\langle\eta^2(t)\rangle.
-\label{eq:tadpole-eom}
-\end{equation}
-The quadratic real-time action for \(\eta\) is
-\begin{equation}
-S_2[\eta;Q]={m\over2}\int\dd t\left[\dot\eta^2-\Om_Q^2(t)\eta^2\right],
+R_0=\frac1f,
+\qquad R_1=0,
 \qquad
-\Om_Q^2(t)=\omega^2+\delta\Om^2(t),
-\qquad
-\delta\Om^2(t)={\lambda\over2m}Q^2(t).
-\label{eq:S2-real}
+R_2=-\frac{V''}{2f^3}+\frac{V''p^2}{f^4}+\frac{(V')^2}{2f^4}.
+\label{eq:R012}
 \end{equation}
-Thus each fluctuation mode obeys the oscillator equation with time-dependent frequency.  For the single quantum-mechanical oscillator there is one mode; in field theory the replacement is a sum/integral over momenta.  Use
+The third-order terms cancel rather than being absent by assumption:
 \begin{equation}
-\hat\eta(t)=\sqrt{\hbar\over2m}\left[a u(t)+a^\dagger u^*(t)\right],
-\qquad
-[a,a^\dagger]=1.
-\label{eq:mode-expansion}
+\{f,R_2\}_{\rm PB}=-\frac{V'''p(p^2-V)}{(p^2+V)^4}
+=\frac{V'''}{24}(R_0)_{ppp}
+\quad\Longrightarrow\quad R_3=0.
+\label{eq:R3}
 \end{equation}
-The equation of motion and Wronskian normalization are
+Thus $R=R_0+R_2+O(\partial_\tau^4)$.  The master integral
 \begin{equation}
-\ddot u+\Om_Q^2(t)u=0,
-\qquad
-W[u]\equiv u\dot u^*-\dot u u^*=2\ii.
-\label{eq:mode-eq-wronskian}
+\int_{-\infty}^{\infty}\frac{\dd p}{2\pi}\frac1{(p^2+\Om^2)^n}
+=\frac{\Gamma(n-\tfrac12)}{2\sqrt\pi\,\Gamma(n)}\Om^{1-2n},\qquad n>\tfrac12
+\label{eq:master}
 \end{equation}
-The Wronskian gives the canonical commutator because
+and $p^2/f^4=f^{-3}-\Om^2f^{-4}$ give
 \begin{equation}
-[\hat\eta,m\dot{\hat\eta}]={\hbar\over2}\left(u\dot u^*-u^*\dot u\right)=\ii\hbar.
-\label{eq:commutator-check}
+\GE(\tau,\tau)=\int\frac{\dd p}{2\pi}R
+=\frac1{2\Om}-\frac{\ddot\Om}{8\Om^4}+\frac{3\dot\Om^2}{16\Om^5}
++O(\partial_\tau^4).
+\label{eq:GE}
 \end{equation}
-In the state annihilated by \(a\),
-\begin{equation}
-\langle\eta^2(t)\rangle={\hbar\over2m}|u(t)|^2.
-\label{eq:eta2-exact-mode}
-\end{equation}
-Equations \eqref{eq:tadpole-eom}, \eqref{eq:mode-eq-wronskian}, and \eqref{eq:eta2-exact-mode} give the exact causal one-loop backreaction system.  The next steps compute its first explicit nonlocal correction.
 
-Choose the free positive-frequency initial mode
+\subsection{Local determinant and effective coefficients}
+
+Because
 \begin{equation}
-u_0(t)={e^{-\ii\omega(t-t_0)}\over\sqrt\omega},
+\delta\Delta\Gamma_E^{(1)}=\frac\hbar2\int\dd\tau\,\GE(\tau,\tau)\,\delta\Om^2,
+\label{eq:varDet}
+\end{equation}
+write, up to a total derivative,
+\begin{equation}
+L_1=\frac12\Om+a\frac{\dot\Om^2}{\Om^3},
 \qquad
-\ddot u_0+\omega^2u_0=0,
+\frac{\delta}{\delta\Om^2}\int L_1\dd\tau
+=\frac1{4\Om}-a\frac{\ddot\Om}{\Om^4}+\frac{3a}{2}\frac{\dot\Om^2}{\Om^5}.
+\label{eq:L1}
+\end{equation}
+Matching Eq.~\eqref{eq:GE}/2 fixes $a=1/16$.  Since $2\Om\dot\Om=(\lambda/m)Q\dot Q$,
+\begin{equation}
+\Gamma_E^{\rm loc}=\int\dd\tau\left[\frac12Z(Q)\dot Q^2+V_{\rm eff}(Q)\right]
++O(\hbar\partial_\tau^4)+O(\hbar^2),
+\label{eq:localE}
+\end{equation}
+with
+\begin{equation}
+V_{\rm eff}=\frac{m\omega^2}{2}Q^2+\frac\lambda{24}Q^4+\frac\hbar2(\Om-\omega),
 \qquad
-u_0\dot u_0^*-\dot u_0u_0^*=2\ii.
+Z(Q)=m+\frac{\hbar\lambda^2Q^2}{32m^2\Om^5}.
+\label{eq:VZ}
+\end{equation}
+
+\section{Local real-time equation}
+
+Under $\tau=\ii t$, the local action becomes
+\begin{equation}
+\Gamma_{\rm RT}^{\rm loc}=\int\dd t\left[\frac12Z(Q)\dot Q^2-V_{\rm eff}(Q)\right],
+\qquad
+Z\ddot Q+\frac12Z'\dot Q^2+V'_{\rm eff}=0.
+\label{eq:RTA}
+\end{equation}
+Here
+\begin{equation}
+\Om'=\frac{\lambda Q}{2m\Om},
+\quad
+V'_{\rm eff}=m\omega^2Q+\frac\lambda6Q^3+\frac{\hbar\lambda Q}{4m\Om},
+\quad
+Z'=\frac{\hbar\lambda^2}{32m^2}\left(\frac{2Q}{\Om^5}-\frac{5\lambda Q^3}{2m\Om^7}\right).
+\label{eq:derivs}
+\end{equation}
+
+\begin{resultbox}{Result A - local adiabatic equation}
+\begingroup\renewcommand{\theHequation}{A}
+\begin{equation}
+\begin{aligned}
+0={}&\left[m+\frac{\hbar\lambda^2Q^2}{32m^2\Om^5}\right]\ddot Q
++\frac{\hbar\lambda^2}{64m^2}
+\left(\frac{2Q}{\Om^5}-\frac{5\lambda Q^3}{2m\Om^7}\right)\dot Q^2\\
+&+m\omega^2Q+\frac\lambda6Q^3+\frac{\hbar\lambda Q}{4m\Om},
+\qquad
+\Om=\sqrt{\omega^2+\frac{\lambda Q^2}{2m}}.
+\end{aligned}
+\tag{A}\label{eq:A}
+\end{equation}
+\endgroup
+\end{resultbox}
+
+The truncated energy
+\begin{equation}
+E_{\rm loc}=\frac12Z\dot Q^2+V_{\rm eff},
+\qquad
+\dot E_{\rm loc}=\dot Q\left(Z\ddot Q+\tfrac12Z'\dot Q^2+V'_{\rm eff}\right)=0,
+\label{eq:Eloc}
+\end{equation}
+shows that the $\dot Q^2$ force is not friction.
+
+\begin{validitybox}[Validity of Result A]
+A controlled derivative expansion requires a slow family $\Om_\epsilon(t)=\bar\Om(\epsilon t)$ with
+$\Om_\epsilon^{(n)}/\Om_\epsilon^{n+1}=O[(\epsilon/\Om_{\min})^n]$ for all relevant $n$, not merely two pointwise inequalities.  Analytic continuation of the Euclidean 1PI functional is an in--out construction; its causal meaning is established below by the in--in memory limit and by an independent adiabatic-mode check.  Result A omits $O(\hbar\partial_t^4)$ and $O(\hbar^2)$.
+\end{validitybox}
+
+\section{Causal Gaussian dynamics and first-Born memory}
+
+The Heisenberg equation and $q=Q+\eta$, $Q=\langle q\rangle$, $\langle\eta\rangle=0$ give
+\begin{equation}
+0=m\ddot Q+m\omega^2Q+\frac\lambda6Q^3+\frac\lambda2Q\langle\eta^2\rangle_0+\Dtwo,
+\qquad \Dtwo\text{ collects two-loop forces},
+\label{eq:mean}
+\end{equation}
+because $\langle\eta^3\rangle$ starts beyond one loop.  For a pure Gaussian state,
+\begin{gather}
+\hat\eta=\sqrt{\frac\hbar{2m}}\,[a u+a^\dagger u^*],
+\qquad
+\ddot u+\Om_Q^2u=0,
+\qquad
+W[u]\equiv u\dot u^*-\dot u\,u^*=2\ii,
+\label{eq:mode}\\[-1mm]
+\Om_Q^2=\omega^2+\delta\Om^2,
+\qquad
+\delta\Om^2=\frac{\lambda Q^2}{2m},
+\qquad
+\langle\eta^2\rangle_0=\frac\hbar{2m}|u|^2.
+\label{eq:variance}
+\end{gather}
+The Wronskian gives $[\hat\eta,m\dot{\hat\eta}]=\ii\hbar$.  With $\Dtwo$ omitted, the closed Gaussian system conserves
+\begin{equation}
+E_G=\frac m2\dot Q^2+\frac{m\omega^2}{2}Q^2+\frac\lambda{24}Q^4
++\frac\hbar4\left(|\dot u|^2+\Om_Q^2|u|^2\right).
+\label{eq:EG}
+\end{equation}
+This is reversible mean--fluctuation energy exchange, not automatic dissipation.
+
+Choose the free-vacuum initial mode
+\begin{equation}
+u_0(t)=\frac{e^{-\ii\omega(t-t_0)}}{\sqrt\omega},
+\qquad
+\delta u(t_0)=\delta\dot u(t_0)=0.
 \label{eq:u0}
 \end{equation}
-Write \(u=u_0+\delta u\).  To first order in \(\delta\Om^2\),
+At first Born order,
 \begin{equation}
-(\partial_t^2+\omega^2)\delta u(t)=-\delta\Om^2(t)u_0(t).
-\label{eq:deltau-eq}
+\delta u_1(t)=-\int_{t_0}^{t}\dd t'\,
+\frac{\sin[\omega(t-t')]}{\omega}\,\delta\Om^2(t')u_0(t'),
+\label{eq:du}
 \end{equation}
-The retarded Green function of \(\partial_t^2+\omega^2\) is
+so
 \begin{equation}
-G_R(t-t')=\theta(t-t'){\sin[\omega(t-t')]\over\omega},
-\qquad
-(\partial_t^2+\omega^2)G_R(t-t')=\delta(t-t').
-\label{eq:GR-osc}
+|u(t)|^2=\frac1\omega-\frac1{\omega^2}\int_{t_0}^{t}\dd t'\,
+\sin[2\omega(t-t')]\delta\Om^2(t')+R_u^{(2)}(t).
+\label{eq:u2Born}
 \end{equation}
-Therefore
+A dimensionally correct finite-time control follows from
 \begin{equation}
-\delta u(t)=-\int_{t_0}^{t}\dd t'\,{\sin[\omega(t-t')]\over\omega}\,\delta\Om^2(t')u_0(t').
-\label{eq:deltau-solution}
+\kappa_T=\sup_{t_0\le t\le T}\frac1\omega\int_{t_0}^{t}\dd t'\,|\delta\Om^2(t')|.
+\label{eq:kappa}
 \end{equation}
-Let \(\Delta=t-t'\).  Then
-\begin{align}
-u_0^*(t)\delta u(t)
-&=-\int_{t_0}^{t}\dd t'\,{\sin(\omega\Delta)\over\omega^2}e^{\ii\omega\Delta}\delta\Om^2(t'),
-\label{eq:u0star-deltau}
-\end{align}
-and adding the complex conjugate gives
-\begin{align}
-|u(t)|^2
-&=|u_0|^2+u_0^*\delta u+u_0\delta u^*+\Oh((\delta\Om^2)^2) \nonumber\\
-&={1\over\omega}-{2\over\omega^2}\int_{t_0}^{t}\dd t'\,\sin(\omega\Delta)\cos(\omega\Delta)\delta\Om^2(t')+\Oh((\delta\Om^2)^2) \nonumber\\
-&={1\over\omega}-{1\over\omega^2}\int_{t_0}^{t}\dd t'\,\sin[2\omega(t-t')]\delta\Om^2(t')+\Oh((\delta\Om^2)^2).
-\label{eq:u-square}
-\end{align}
-Using \(\delta\Om^2=\lambda Q^2/(2m)\),
+For $\kappa_T<1$, the Volterra--Neumann series converges and one may bound
 \begin{equation}
-\langle\eta^2(t)\rangle={\hbar\over2m\omega}
--{\hbar\lambda\over4m^2\omega^2}\int_{t_0}^{t}\dd t'\,\sin[2\omega(t-t')]Q^2(t')
-+\Oh\left({\hbar\over m}{(\delta\Om^2)^2\over\omega^5}\right).
-\label{eq:eta2-memory}
+|R_u^{(2)}(t)|\le
+\frac{\kappa_T^2(3-2\kappa_T)}{\omega(1-\kappa_T)^2},
+\qquad t\in[t_0,T].
+\label{eq:Rbound}
 \end{equation}
-Substitution into Eq.~\eqref{eq:tadpole-eom} gives the explicit causal nonlocal tree plus one-loop equation
+Thus pointwise $|\delta\Om^2|/\omega^2\ll1$ alone is not a uniform long-time guarantee.
+
+Using Eq.~\eqref{eq:variance} in Eq.~\eqref{eq:mean} gives the retarded equation below, with
+$\DBorn=(\hbar\lambda Q/4m)R_u^{(2)}$.
+
+\begin{resultbox}{Result B - causal first-Born memory equation}
+\begingroup\renewcommand{\theHequation}{B}
 \begin{equation}
-\boxed{\begin{aligned}
-0={}&m\ddot Q(t)+m\omega^2Q(t)+{\lambda\over6}Q^3(t)
-+\hbar{\lambda\over4m\omega}Q(t) \\
-&-\hbar{\lambda^2\over8m^2\omega^2}Q(t)
+\begin{aligned}
+0={}&m\ddot Q(t)+m\omega^2Q(t)+\frac\lambda6Q^3(t)
++\frac{\hbar\lambda}{4m\omega}Q(t)\\
+&-\frac{\hbar\lambda^2}{8m^2\omega^2}Q(t)
 \int_{t_0}^{t}\dd t'\,\sin[2\omega(t-t')]Q^2(t')
-+\Oh\left({\hbar\lambda Q\over m}{(\delta\Om^2)^2\over\omega^5}\right).
-\end{aligned}}
-\tag{B}
-\label{eq:final-nonlocal}
++\DBorn(t)+\Dtwo(t).
+\end{aligned}
+\tag{B}\label{eq:B}
 \end{equation}
-For finite \(t_0\), Eq.~\eqref{eq:final-nonlocal} contains physical initial-time transients.  To compare with the adiabatic effective action one takes the usual retarded adiabatic-switching limit, equivalently \(t_0\to-\infty\) with a factor \(e^{-\epsilon(t-t')}\), \(\epsilon\to0^+\), in the memory integral.
+\endgroup
+\end{resultbox}
 
-\section{Local limit and coefficient check}
+Finite-$t_0$ oscillations are state-preparation transients.  They describe a real quench when that is the preparation, but are artifacts if the intended state is the interacting adiabatic vacuum.  For comparison with the Euclidean vacuum functional, take $t_0\to-\infty$ with $e^{-\epsilon(t-t')}$ inserted before $\epsilon\to0^+$.
 
-Define the adiabatically switched memory functional
+\section{Local limit and independent coefficient checks}
+
+\subsection{Low-frequency expansion of the memory kernel}
+
+With $a=2\omega$, define
 \begin{equation}
-I[f](t)=\lim_{\epsilon\to0^+}\int_0^\infty\dd s\,e^{-\epsilon s}\sin(2\omega s)f(t-s),
-\qquad
-f(t)=Q^2(t).
-\label{eq:I-def}
+I[f](t)=\lim_{\epsilon\to0^+}\int_0^\infty\dd s\,e^{-\epsilon s}\sin(as)f(t-s).
+\label{eq:I}
 \end{equation}
-For slowly varying \(f\),
+For $f(t)=\int(\dd\nu/2\pi)e^{-\ii\nu t}\tilde f(\nu)$,
 \begin{equation}
-f(t-s)=f(t)-s\dot f(t)+{s^2\over2}\ddot f(t)+\cdots.
-\label{eq:f-expand}
+\widetilde{I[f]}(\nu)=\frac{a}{a^2-(\nu+\ii0)^2}\tilde f(\nu).
+\label{eq:transfer}
 \end{equation}
-The regulated moments are
+If the spectrum is confined well inside $|\nu|<a$, then
 \begin{equation}
-\int_0^\infty\dd s\,e^{-\epsilon s}\sin(as)={a\over a^2+\epsilon^2}\xrightarrow{\epsilon\to0^+}{1\over a},
-\label{eq:moment0}
+I[f]=\frac f a-\frac{\ddot f}{a^3}+\frac{f^{(4)}}{a^5}+\cdots.
+\label{eq:Iexp}
 \end{equation}
-\begin{equation}
-\int_0^\infty\dd s\,s e^{-\epsilon s}\sin(as)={2a\epsilon\over(a^2+\epsilon^2)^2}\xrightarrow{\epsilon\to0^+}0,
-\label{eq:moment1}
-\end{equation}
-\begin{equation}
-\int_0^\infty\dd s\,s^2 e^{-\epsilon s}\sin(as)
-={2a(3\epsilon^2-a^2)\over(a^2+\epsilon^2)^3}
-\xrightarrow{\epsilon\to0^+}-{2\over a^3}.
-\label{eq:moment2}
-\end{equation}
-With \(a=2\omega\),
-\begin{equation}
-I[Q^2](t)={Q^2\over2\omega}-{1\over(2\omega)^3}{\dd^2Q^2\over\dd t^2}+\Oh(\partial_t^4).
-\label{eq:I-local}
-\end{equation}
-The memory force in Eq.~\eqref{eq:final-nonlocal} therefore becomes
+The nearest poles are at $\nu=\pm2\omega$; no local series is controlled near that pair resonance.  For $f=Q^2$,
 \begin{align}
--\hbar{\lambda^2\over8m^2\omega^2}Q I[Q^2]
-&=-\hbar{\lambda^2Q^3\over16m^2\omega^3}
-+\hbar{\lambda^2\over64m^2\omega^5}Q{\dd^2Q^2\over\dd t^2}+\Oh(\partial_t^4) \nonumber\\
-&=-\hbar{\lambda^2Q^3\over16m^2\omega^3}
-+\hbar{\lambda^2\over32m^2\omega^5}\left(Q^2\ddot Q+Q\dot Q^2\right)+\Oh(\partial_t^4),
-\label{eq:memory-local-force}
+-\frac{\hbar\lambda^2}{8m^2\omega^2}QI[Q^2]
+={}&-\frac{\hbar\lambda^2Q^3}{16m^2\omega^3}
++\frac{\hbar\lambda^2}{32m^2\omega^5}
+\left(Q^2\ddot Q+Q\dot Q^2\right)
++O(\hbar\partial_t^4).
+\label{eq:memorylocal}
 \end{align}
-because
+
+Introduce the dimensionless amplitude
 \begin{equation}
-Q{\dd^2Q^2\over\dd t^2}=Q{\dd\over\dd t}(2Q\dot Q)=2Q^2\ddot Q+2Q\dot Q^2.
-\label{eq:Q2ddot}
-\end{equation}
-Now expand the adiabatic equation \eqref{eq:final-adiabatic} to the same order.  Since
-\begin{equation}
-{1\over\Om}={1\over\omega}\left(1-{\lambda Q^2\over4m\omega^2}+\Oh(\lambda^2Q^4)\right),
+x=\frac{\lambda Q^2}{2m\omega^2},
 \qquad
-{1\over\Om^5}={1\over\omega^5}+\Oh(\lambda Q^2),
-\label{eq:Omega-smallQ}
+\frac1\Om=\frac1\omega\left(1-\frac x2+O(x^2)\right),
+\qquad
+\frac1{\Om^5}=\frac1{\omega^5}\left(1-\frac{5x}{2}+O(x^2)\right).
+\label{eq:x}
 \end{equation}
-Eq.~\eqref{eq:final-adiabatic} gives, through \(\Oh(\hbar\lambda^2)\),
+Expanding Result A through $O(\hbar\lambda^2)$ and second derivative order gives
 \begin{equation}
-0=m\ddot Q+m\omega^2Q+{\lambda\over6}Q^3
-+\hbar{\lambda Q\over4m\omega}
--\hbar{\lambda^2Q^3\over16m^2\omega^3}
-+\hbar{\lambda^2\over32m^2\omega^5}\left(Q^2\ddot Q+Q\dot Q^2\right)+\cdots.
-\label{eq:adiabatic-smallQ}
+\begin{aligned}
+0={}&m\ddot Q+m\omega^2Q+\frac\lambda6Q^3+\frac{\hbar\lambda Q}{4m\omega}
+-\frac{\hbar\lambda^2Q^3}{16m^2\omega^3}\\
+&+\frac{\hbar\lambda^2}{32m^2\omega^5}
+\left(Q^2\ddot Q+Q\dot Q^2\right)+\text{higher orders},
+\end{aligned}
+\label{eq:match}
 \end{equation}
-This is exactly the local derivative expansion of Eq.~\eqref{eq:final-nonlocal} in the adiabatic-switching limit.  The recheck also shows why the \(\dot Q^2\) term in Eq.~\eqref{eq:final-adiabatic} is not friction: it is part of the conservative local expansion of the causal memory kernel.
+which exactly matches the displayed local expansion of Result B at that order.
+
+\subsection{Real-time adiabatic/WKB check}
+
+The stronger check does not expand in $x$.  For the adiabatic vacuum, take
+\begin{equation}
+u(t)=\frac1{\sqrt{W(t)}}\exp\left[-\ii\int^tW(t')\dd t'\right],
+\qquad
+W^2=\Om^2-\frac{\ddot W}{2W}+\frac{3\dot W^2}{4W^2}.
+\label{eq:WKB}
+\end{equation}
+Iterating through second adiabatic order,
+\begin{equation}
+|u|^2=\frac1\Om+\frac{\ddot\Om}{4\Om^4}-\frac{3\dot\Om^2}{8\Om^5}+O(\partial_t^4).
+\label{eq:uWKB}
+\end{equation}
+Using
+\begin{equation}
+\dot\Om=\frac{\lambda Q\dot Q}{2m\Om},
+\qquad
+\ddot\Om=\frac{\lambda(\dot Q^2+Q\ddot Q)}{2m\Om}
+-\frac{\lambda^2Q^2\dot Q^2}{4m^2\Om^3},
+\label{eq:Omdots}
+\end{equation}
+the tadpole force becomes
+\begin{align}
+\frac\lambda2Q\langle\eta^2\rangle_0
+={}&\frac{\hbar\lambda Q}{4m\Om}
++\frac{\hbar\lambda^2Q^2}{32m^2\Om^5}\ddot Q
++\frac{\hbar\lambda^2}{64m^2}
+\left(\frac{2Q}{\Om^5}-\frac{5\lambda Q^3}{2m\Om^7}\right)\dot Q^2
++O(\hbar\partial_t^4),
+\label{eq:WKBmatch}
+\end{align}
+reproducing every displayed one-loop coefficient in Result A.
+
+\vspace{2pt}
+
 
 \end{document}

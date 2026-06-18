@@ -60,9 +60,9 @@
   <div class="card">
     <h2>Parameters</h2>
     <div class="grid">
-      <div class="fld"><label>ħ (hbar)</label><input id="hbar" type="number" step="0.1" value="0.5"></div>
-      <div class="fld"><label>mass m</label><input id="m" type="number" step="0.1" value="1"></div>
-      <div class="fld"><label>frequency ω</label><input id="omega" type="number" step="0.1" value="1"></div>
+      <div class="fld"><label>ħ (hbar)</label><input id="hbar" type="number" step="0.1" min="0" value="0.5"></div>
+      <div class="fld"><label>mass m</label><input id="m" type="number" step="0.1" min="0" value="1"></div>
+      <div class="fld"><label>frequency ω</label><input id="omega" type="number" step="0.1" min="0" value="1"></div>
       <div class="fld"><label>λ (quartic = λ·q⁴/4!)</label><input id="lambda" type="number" step="0.1" value="0.3"></div>
       <div class="fld"><label>Re(α)</label><input id="alphaRe" type="number" step="0.1" value="1.4"></div>
       <div class="fld"><label>Im(α)</label><input id="alphaIm" type="number" step="0.1" value="0"></div>
@@ -271,7 +271,19 @@ function nonlocalTrajectory(p, a, ts){
   return Qout;
 }
 
+// Reject invalid inputs up front (caught by run()'s try/catch -> friendly status).
+// JS Math.sqrt(neg)=NaN does NOT throw (unlike Julia), so without this a negative/zero
+// ħ,m,ω would silently render NaN and the report could still print a green "success".
+function validateParams(p){
+  if(!(p.hbar>0))  throw new Error(`ħ must be > 0 (got ${p.hbar}); √(ħ/2mω) is otherwise 0/Inf and the state is NaN.`);
+  if(!(p.m>0))     throw new Error(`m must be > 0 (got ${p.m}).`);
+  if(!(p.omega>0)) throw new Error(`ω must be > 0 (got ${p.omega}).`);
+  if(!(p.xmax>p.xmin)) throw new Error(`xmax must be > xmin (got xmin=${p.xmin}, xmax=${p.xmax}).`);
+  if(!(isFinite(p.tmax)&&p.tmax>0)) throw new Error(`tmax must be > 0 (got ${p.tmax}).`);
+  if(!isFinite(p.lambda)) throw new Error(`λ must be a finite number.`);
+}
 function simulate(p0){
+  validateParams(p0);
   const a=resolveAlpha(p0), aAbs=Math.hypot(a.re,a.im);
   const p=autosizeGrid(p0,aAbs);
   const N=p.Ncut, hbar=p.hbar, m=p.m, w=p.omega;
@@ -318,6 +330,10 @@ function simulate(p0){
     cRe[n]=(cRe[n-1]*a.re - cIm[n-1]*a.im)*inv; cIm[n]=(cRe[n-1]*a.im + cIm[n-1]*a.re)*inv; }
   let rawNorm=0; for(let n=0;n<N;n++) rawNorm+=cRe[n]*cRe[n]+cIm[n]*cIm[n]; rawNorm=Math.sqrt(rawNorm);
   const truncErr=Math.abs(rawNorm-1);
+  // Distinct from the too-small-Ncut case: for |α| ≳ 38.6 the seed exp(-|α|²/2)
+  // underflows to 0, so rawNorm=0 and cRe/=rawNorm would be a silent 0/0=NaN. Raising
+  // Ncut does NOT help — fail loudly with an accurate message instead.
+  if(!(rawNorm>0)) throw new Error(`Coherent-state seed exp(-|α|²/2) underflowed to 0 for |α|²=${(a.re*a.re+a.im*a.im).toFixed(1)}: |α| is too large for double precision (raising Ncut will NOT help — use a smaller |α|).`);
   for(let n=0;n<N;n++){ cRe[n]/=rawNorm; cIm[n]/=rawNorm; }
   // top-5% population gauge
   const ntop=Math.max(1,Math.round(0.05*N)); let toppop=0;
@@ -565,6 +581,7 @@ function buildReport(S){
   if(S.truncErr>1e-6) L.push(`⚠ basis under-resolved — raise Ncut for accuracy.`);
   if(S.toppop_dyn>1e-6) L.push(`⚠ population reaches the Fock cutoff during evolution (max top-5% = ${S.toppop_dyn.toExponential(2)}) — raise Ncut.`);
   if(S.normxMax>1e-3) L.push(`⚠ density lost norm on the grid — widen x-range / keep autogrid on.`);
+  if(S.p.lambda<0) L.push(`⚠ λ<0: V = ½mω²q² + (λ/24)q⁴ is UNBOUNDED BELOW. The spectrum (E_min → −∞ as Ncut grows) and the evolution are an Ncut-dependent Fock-truncation artifact, NOT physical — a regularized toy only. Norm/energy conservation does NOT detect this.`);
   L.push(`────────────────────────────────────────────────`);
   const rms=(arr)=>{ let s=0,n=0; for(let k=0;k<S.Nt;k++){ if(isFinite(arr[k])){ const d=arr[k]-S.xexp[k]; s+=d*d; n++; } } return n?Math.sqrt(s/n):NaN; };
   const dcl=rms(S.qcl), dA=rms(S.qol), dB=rms(S.qnl);
@@ -575,10 +592,16 @@ function buildReport(S){
   const best=cand.reduce((mn,c)=>c[1]<mn[1]?c:mn, cand[0]);
   L.push(`→ closest to the full quantum mean: ${best[0]} (RMS = ${fmt(best[1],3)})`);
   L.push(`eigensolver: max eigenpair residual ‖H·v−E·v‖ = ${S.eigResid.toExponential(2)},  ‖VᵀV−I‖ = ${S.eigOrth.toExponential(2)}`);
-  const unitary = S.eigResid<1e-8 && S.eigOrth<1e-8;
+  // Gate the residual RELATIVE to the matrix scale: ‖H·v−E·v‖ grows with ‖H‖ (∝ λ, Ncut),
+  // so an absolute threshold spuriously trips at large λ/Ncut even when the spectrum is
+  // exact to ~1e-14 relative (and raising Ncut would only make ‖H‖ — and the absolute
+  // residual — larger). Orthonormality is dimensionless, so keep its gate absolute.
+  const enorm = (S.E && S.E.length) ? S.E.reduce((mx,e)=>Math.max(mx,Math.abs(e)),0) : 1;
+  const unitary = S.eigResid < 1e-10*Math.max(enorm,1) && S.eigOrth < 1e-8;
   const ok = S.truncErr<1e-6 && Math.abs(S.xexp[0]-tgtx)<1e-5 && Math.abs(S.pexp0-tgtp)<1e-5;
-  L.push((ok&&unitary) ? `✓ coherent-state targets met; eigenbasis evolution unitary & energy-conserving (residual verified).`
-                       : `(${ok?"targets met":"targets relaxed — see warnings"}${unitary?"":"; ⚠ eigensolver residual high — raise Ncut / results unreliable"})`);
+  L.push((ok&&unitary&&S.p.lambda>=0) ? `✓ coherent-state targets met; eigenbasis evolution unitary & energy-conserving (residual verified).`
+       : (S.p.lambda<0) ? `(λ<0: regularized toy — see the unbounded-below caveat above; "conservation" within Ncut does not validate it)`
+       : `(${ok?"targets met":"targets relaxed — see warnings"}${unitary?"":"; ⚠ eigensolver residual above tolerance relative to ‖H‖ — results unreliable"})`);
   return L.join("\n");
 }
 

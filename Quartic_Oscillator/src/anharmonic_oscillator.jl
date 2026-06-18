@@ -18,8 +18,10 @@
 #     * the TREE + ONE-LOOP LOCAL (A)        (local adiabatic eq; oneloop_trajectory), and
 #     * the TREE + ONE-LOOP NONLOCAL (B)     (causal memory eq; nonlocal_trajectory).
 #  (A) and (B) are the two real-time one-loop equations derived in
-#  theory/q4_1_loop.tex. All four start from the same coherent state; they agree
-#  at early times (Ehrenfest) and separate once the wavepacket distorts. The
+#  theory/q4_1_loop.tex. All four start from the same initial mean position and
+#  velocity (q0,q̇0) of the coherent state (the classical/one-loop curves are scalar
+#  ODEs that carry only those first moments, not the full state); they agree at early
+#  times and separate once the wavepacket distorts. The
 #  classical and one-loop curves are integrated with a stdlib RK4 (no extra packages).
 #
 #  METHOD (numerically exact within an Ncut Fock truncation, zero-install)
@@ -216,7 +218,8 @@ Hermitian matrix in the Fock basis.
 The anharmonic term is the **Galerkin projection** `P_N x⁴ P_N`, NOT `(P_N x P_N)⁴`.
 Truncating `x` to `N` levels and *then* taking the 4th power deletes the virtual
 paths through Fock levels ≥ N, which corrupts the matrix near the cutoff (the
-`⟨n|x⁴|n⟩` element is already off by O(100) at N≈6). We instead build `x` in an
+bottom-corner `⟨n|x⁴|n⟩` is already off by O(10) at N≈6 — ≈2.8 vs the exact 11.4 at
+the default ħ=0.5 — growing to O(100) by N≈12–40). We instead build `x` in an
 `(N+4)`-dimensional workspace, form `x⁴` there, and crop the exact upper-left
 `N×N` block — this reproduces the analytic three-band `x⁴` to machine precision and
 is the proper variational (Rayleigh–Ritz) finite-basis Hamiltonian. For the default
@@ -282,6 +285,12 @@ renormalizing -- so a too-small Ncut degrades gracefully instead of aborting.
 function coherent_state_fock(alpha::ComplexF64, N::Int)
     c = coherent_amplitudes(alpha, N)
     nrm = norm(c)
+    # Distinct from the too-small-Ncut case below: for |alpha| ≳ 38.6 the seed
+    # exp(-|alpha|^2/2) underflows to 0 in Float64, so the whole vector is 0 and
+    # nrm=0 -> c/nrm would be a silent 0/0=NaN. Raising Ncut does NOT help here.
+    (nrm == 0 || !isfinite(nrm)) && error(@sprintf(
+        "Coherent-state seed exp(-|alpha|^2/2) underflowed to 0 for |alpha|^2=%.1f: |alpha| is too large for double precision (raising Ncut will NOT help — use a smaller |alpha| or a log-domain construction).",
+        abs2(alpha)))
     if abs(nrm - 1) > 1e-8
         @warn @sprintf("Coherent state under-resolved by Fock truncation (tail |norm-1|=%.2e for |alpha|^2=%.2f, Ncut=%d); raise Ncut for accuracy.",
                        abs(nrm - 1), abs2(alpha), N)
@@ -474,9 +483,12 @@ end
 #  That turns the integro-differential equation into an EXACT augmented ODE system
 #  (Q, V=Qdot, C, S) -- no history storage -- integrated with the same RK4.
 #
-#  Same initial data as the other curves (C(t0)=S(t0)=0, t0=0). Unlike the local
-#  one-loop (A), the memory term is non-conservative, so the mean amplitude can
-#  drift -- this is the leading non-adiabatic backreaction of the fluctuations.
+#  Same initial data as the other curves (C(t0)=S(t0)=0, t0=0). The distinction from
+#  the local one-loop (A) is that B's term is NONLOCAL (it carries memory of the past
+#  Q history) -- this is the leading non-adiabatic backreaction of the fluctuations.
+#  The memory term is NOT genuine friction (theory/q4_1_loop.tex:471): (A) is just its
+#  local conservative expansion. B's amplitude stays bounded/quasi-periodic; it does
+#  not decay (the closed quantum system's amplitude loss is reversible dephasing).
 # =============================================================================
 
 """
@@ -581,11 +593,34 @@ function autosize_grid(p::Params, alpha::ComplexF64)
 end
 
 """
+    validate_params(p::Params)
+
+Reject physically/numerically invalid parameters up front with a clear error,
+BEFORE any compute — otherwise invalid inputs silently propagate NaN (e.g. hbar=0
+makes the length scale 0/Inf) and the self-test/report would announce success on
+garbage. Note: a finite Hermitian matrix has a discrete spectrum for ANY lambda, so
+lambda<0 is allowed here but flagged at runtime (the potential is unbounded below and
+the truncation is then only an artificial regulator) rather than rejected.
+"""
+function validate_params(p::Params)
+    p.hbar  > 0 || error("hbar must be > 0 (got $(p.hbar)); the length scale √(ħ/2mω) is otherwise 0/Inf and the state is NaN.")
+    p.m     > 0 || error("m must be > 0 (got $(p.m)).")
+    p.omega > 0 || error("omega must be > 0 (got $(p.omega)).")
+    p.Ncut  ≥ 1 || error("Ncut must be ≥ 1 (got $(p.Ncut)).")
+    p.Nx    ≥ 2 || error("Nx must be ≥ 2 (got $(p.Nx)); need at least two grid points.")
+    p.Nt    ≥ 2 || error("Nt must be ≥ 2 (got $(p.Nt)); need at least two time points.")
+    p.tmax  > 0 || error("tmax must be > 0 (got $(p.tmax)).")
+    p.xmax  > p.xmin || error("xmax must be > xmin (got xmin=$(p.xmin), xmax=$(p.xmax)); the grid spacing dx would be ≤ 0.")
+    return nothing
+end
+
+"""
     simulate(p::Params) -> SimResult
 
 Run the full Fock-basis evolution and reconstruct everything on the grid.
 """
 function simulate(p::Params)
+    validate_params(p)
     alpha = resolve_alpha(p)
     p = autosize_grid(p, alpha)        # grow the grid to contain the state (if autogrid)
 
@@ -626,8 +661,14 @@ function simulate(p::Params)
 
     # --- classical trajectory q(t) from the classical EOM (same initial alpha) ---
     qcl, pcl = classical_trajectory(p, alpha, ts)
+    if p.lambda < 0
+        # Fires whenever lambda<0 — NOT only when the classical RK4 overflows. A bound
+        # wavepacket (e.g. the defaults) keeps the classical curve finite, yet the quartic
+        # potential is still unbounded below, so the Fock truncation is only a regulator.
+        @warn "lambda<0: the quartic potential V=½mω²q²+(λ/24)q⁴ is UNBOUNDED BELOW. The quantum propagator still runs and conserves norm/energy WITHIN the fixed Ncut, but the spectrum (E_min → −∞ as Ncut grows) and hence the evolution are an Ncut-dependent Fock-truncation artifact — treat the result as a regularized toy model, not the true lambda<0 dynamics. (Norm/energy conservation and the L1 convergence check do NOT detect this.)"
+    end
     if any(!isfinite, qcl)
-        @warn "Classical trajectory diverged to NaN/Inf (unbounded potential, e.g. lambda<0); the classical q(t) curve will be incomplete. The quantum propagator still runs and conserves norm/energy WITHIN the fixed Ncut, but for lambda<0 the potential is unbounded below: the Fock truncation acts as an artificial regulator, so the spectrum (and hence the evolution) is Ncut-dependent and NOT physically convergent — treat it as a regularized toy model, not the true lambda<0 dynamics."
+        @warn "Classical trajectory diverged to NaN/Inf (unbounded potential); the classical q(t) curve will be incomplete."
     end
 
     # --- tree+one-loop means: local adiabatic (A) and causal nonlocal (B) ---
@@ -755,6 +796,11 @@ function run_convergence_check(p::Params)
     if l1 > 1e-3
         @warn @sprintf("Density differs by %.2e between Ncut=%d and Ncut=%d -- increase Ncut (large lambda/alpha).",
                        l1, p.Ncut, p2.Ncut)
+    elseif p.lambda < 0
+        # L1 density agreement over a finite window is NOT spectral convergence when the
+        # potential is unbounded below: E_min → −∞ with Ncut even while the windowed
+        # density looks stable. Do not certify "converged" in that case.
+        println("    -> L1 density stable over this window, but lambda<0 is unbounded below: NOT converged in Ncut (ground state diverges with Ncut; regularized toy only).")
     else
         println("    -> Converged in Ncut (L1 diff < 1e-3).")
     end
@@ -873,9 +919,10 @@ end
 #    * classical q(t)               (tree level / hbar^0 EOM)
 #    * tree+one-loop local (A)      (local adiabatic eq, theory/q4_1_loop)
 #    * tree+one-loop nonlocal (B)   (causal memory eq, theory/q4_1_loop)
-#  All start from the same coherent state; they coincide at early times and
-#  split as the wavepacket distorts. (B)'s memory term is non-conservative, so it
-#  can follow the quantum amplitude better than the conservative (A).
+#  All start from the same initial (q0,q̇0) of the coherent state; they coincide at
+#  early times and split as the wavepacket distorts. (B)'s memory term is NONLOCAL
+#  (carries history), so over the tuned window its bounded envelope tracks the onset
+#  of the quantum dephasing more closely than the local conservative (A).
 # =============================================================================
 
 function plot_q_comparison(r::SimResult)
@@ -937,6 +984,7 @@ Examples:
 """
 function run_simulation(; kwargs...)
     p = Params(Params(); kwargs...)   # copy-ctor gives a friendly "Unknown Params field" on typos
+    validate_params(p)                # reject invalid inputs BEFORE the self-test/report can announce success on NaN
     println("\n>>> run_simulation: Ncut=$(p.Ncut), lambda=$(p.lambda), ",
             "hbar=$(p.hbar), tmax=$(round(p.tmax,digits=3)), Nt=$(p.Nt)")
     selftest_coherent_state(p)

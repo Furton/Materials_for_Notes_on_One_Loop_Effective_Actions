@@ -10,7 +10,9 @@ curves: the **full quantum** result (numerically exact in an `Ncut`-state Fock b
 solution `q(t)` (tree level), and the two **real-time tree + one-loop** solutions
 from [`theory/q4_1_loop.tex`](theory/q4_1_loop.tex) — the **local adiabatic (A)**
 and the **causal nonlocal (B)** equations (the leading ħ correction, local vs with
-memory). All four start from the same coherent state. The **default parameters
+memory). All four start from the **same initial mean position and velocity
+`(q₀,q̇₀)`** of the coherent state (the classical/one-loop curves are scalar ODEs
+carrying only those first moments, so their `t=0` accelerations already differ). The **default parameters
 (ħ=0.5, λ=0.3, α=1.4)** are tuned to a weak-anharmonicity, semiclassical regime in
 which the **causal nonlocal one-loop (B) tracks the full quantum mean most closely**:
 the classical clearly dephases, the local one-loop (A) follows the quantum, and the
@@ -48,7 +50,7 @@ The Julia version below remains the reference implementation and test bed.
 ```
 oscillator.html                interactive browser UI (no install — just open it)
 src/anharmonic_oscillator.jl   the Julia simulator (single method, one file)
-src/audit_checks.jl            regression / verification suite (39 checks)
+src/audit_checks.jl            regression / verification suite (47 checks)
 fig/                           generated figures (GIF + comparison PNG)
 theory/q4_1_loop.{tex,pdf}     tree + one-loop effective-action derivation
 README.md
@@ -145,7 +147,7 @@ tree+1-loop local-A `Q(t)` (orange) and nonlocal-B (purple) markers are shown to
 
 Two one-loop curves solve the real-time tree-plus-one-loop equations derived in
 [`theory/q4_1_loop.tex`](theory/q4_1_loop.tex) for the mean `Q(t) = ⟨q⟩(t)`, both
-starting from the same coherent state.
+starting from the same initial `(q₀,q̇₀)`.
 
 **(A) Local adiabatic** (eq. `final-adiabatic`, `oneloop_trajectory`) — the
 Wick-rotated derivative-expansion form, conservative:
@@ -169,8 +171,13 @@ m Q̈ + m ω² Q + (λ/6) Q³ + ħλ/(4mω) Q
 The trig kernel is separable, so the memory integral becomes two extra
 accumulators (`Ċ=cos2ωt·Q²`, `Ṡ=sin2ωt·Q²`, `I = sin2ωt·C − cos2ωt·S`) and the
 whole thing is an **exact augmented `(Q,V,C,S)` ODE**, integrated with the same
-stdlib RK4 — no history storage. Unlike the conservative (A), (B)'s memory term is
-non-conservative, so it can follow the quantum amplitude decay; the suite checks
+stdlib RK4 — no history storage. The distinction from (A) is that (B)'s term is
+**nonlocal** (it carries memory of the past `Q`), not that it is dissipative: the
+memory term is *not* genuine friction — (A) is its local conservative expansion
+([`theory/q4_1_loop.tex`](theory/q4_1_loop.tex)). Over the tuned window (B)'s
+**bounded** envelope tracks the onset of the quantum dephasing more closely than the
+local (A); it does **not** decay, and does not reproduce the long-time collapse (the
+closed system's amplitude loss is reversible Ehrenfest dephasing). The suite checks
 (B)'s RK4 solution against its integro-differential equation to a <5e-3 residual.
 
 Both share the theory's `V = (λ/4!) q⁴` normalization (no rescaling) and reduce
@@ -183,7 +190,7 @@ A standalone regression suite ([src/audit_checks.jl](src/audit_checks.jl))
 independently verifies the physics, numerics, classical EOM, and robustness:
 
 ```bash
-julia src/audit_checks.jl     # 39 checks; nonzero exit on any failure
+julia src/audit_checks.jl     # 47 checks; nonzero exit on any failure
 ```
 
 Highlights of what it proves:
@@ -194,8 +201,12 @@ Highlights of what it proves:
   computational paths in the one exactly-solvable case.
 - Ehrenfest `d⟨x⟩/dt=⟨p⟩/m`, classical energy conserved to 1e-13, RK4 4th-order,
   HO reconstruction basis orthonormal to 1e-14, tree+one-loop EOM residual <1e-3.
-- Robustness: graceful Fock-truncation (warns + renormalizes instead of crashing),
-  `autogrid` containment, negative-λ classical-divergence warning, friendly errors.
+- Robustness & honest edge cases: graceful Fock-truncation (warns + renormalizes
+  instead of crashing), `autogrid` containment, up-front validation of `ħ,m,ω>0`
+  and `xmax>xmin`/`Nt≥2` (rejected, never silently NaN), a distinct large-`|α|`
+  underflow error (where raising `Ncut` would not help), and an **unconditional
+  `λ<0` "unbounded-below / Ncut-dependent artifact" caveat** (fires even when the
+  classical curve stays finite, and the convergence check refuses to certify it).
 
 The main script also prints a physics report on every run and **hard-asserts**
 norm + energy conservation.

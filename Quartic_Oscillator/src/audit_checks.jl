@@ -23,7 +23,7 @@
 # =============================================================================
 ENV["GKSwstype"] = "nul"
 include(joinpath(@__DIR__, "anharmonic_oscillator.jl"))
-using Printf, LinearAlgebra
+using Printf, LinearAlgebra, Logging
 
 pass(name, ok, msg="") = (@printf("  [%s] %-52s %s\n", ok ? "PASS" : "FAIL", name, msg); ok)
 const ALLOK = Ref(true)
@@ -308,6 +308,31 @@ let
           @sprintf("L1 dens diff Ncut 60 vs 120 = %.3f", l1))
     check("default run is cleanly resolved (dyn top-pop << 1)", rd.toppop_dyn < 1e-6,
           @sprintf("default max top-5%% pop=%.2e", rd.toppop_dyn))
+end
+
+# 17. INPUT VALIDATION & HONEST EDGE-CASE REPORTING. Invalid physical/grid params must
+#     be REJECTED up front -- not silently produce NaN that a self-test/report then calls
+#     "OK". Large-|alpha| underflow must error DISTINCTLY (raising Ncut won't help). And
+#     lambda<0 must raise the unbounded-below caveat UNCONDITIONALLY (even when the
+#     classical curve stays finite, as at the defaults), since the spectrum is then an
+#     Ncut-dependent truncation artifact that norm/energy conservation cannot detect.
+println("\n-- 17. input validation & honest edge-case reporting --")
+let
+    threw(f) = try; f(); false; catch; true; end
+    check("reject hbar<=0",      threw(()->simulate(Params(hbar=0.0))))
+    check("reject m<=0",         threw(()->simulate(Params(m=0.0))))
+    check("reject omega<=0",     threw(()->simulate(Params(omega=-1.0))))
+    check("reject xmax<=xmin",   threw(()->simulate(Params(xmin=5.0, xmax=-5.0))))
+    check("reject Nt<2",         threw(()->simulate(Params(Nt=1))))
+    check("default params pass validation", !threw(()->validate_params(Params())))
+    check("large-|alpha| underflow errors distinctly", threw(()->coherent_state_fock(40.0+0.0im, 200)))
+    io = IOBuffer()
+    with_logger(SimpleLogger(io)) do
+        simulate(Params(lambda=-0.3, make_gif=false, make_comparison=false, convergence_check=false))
+    end
+    logtext = String(take!(io))
+    check("lambda<0 raises unbounded-below caveat unconditionally", occursin("UNBOUNDED BELOW", logtext),
+          occursin("UNBOUNDED BELOW", logtext) ? "caveat emitted (classical finite)" : "(caveat MISSING)")
 end
 
 println("\n" * "="^82)
